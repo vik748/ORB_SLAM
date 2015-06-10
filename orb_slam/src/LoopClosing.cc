@@ -19,17 +19,11 @@
 */
 
 #include "LoopClosing.h"
-
 #include "Sim3Solver.h"
-
 #include "Converter.h"
-
 #include "Optimizer.h"
-
 #include "ORBmatcher.h"
-
 #include <ros/ros.h>
-
 #include <g2o/types/sim3/types_seven_dof_expmap.h>
 
 namespace ORB_SLAM
@@ -426,7 +420,7 @@ void LoopClosing::CorrectLoop()
         cv::Mat Tiw = pKFi->GetPose();
 
         if(pKFi!=mpCurrentKF)
-        {            
+        {
             cv::Mat Tic = Tiw*Twc;
             cv::Mat Ric = Tic.rowRange(0,3).colRange(0,3);
             cv::Mat tic = Tic.rowRange(0,3).col(3);
@@ -488,7 +482,7 @@ void LoopClosing::CorrectLoop()
 
         // Make sure connections are updated
         pKFi->UpdateConnections();
-    }    
+    }
 
     // Start Loop Fusion
     // Update matched map points and replace if duplicated

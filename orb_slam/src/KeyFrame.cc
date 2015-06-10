@@ -50,7 +50,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
             mGrid[i][j] = F.mGrid[i][j];
     }
 
-    SetPose(F.mTcw);    
+    SetPose(F.mTcw);
 }
 
 void KeyFrame::ComputeBoW()
@@ -156,7 +156,7 @@ void KeyFrame::UpdateBestCovisibles()
     }
 
     mvpOrderedConnectedKeyFrames = vector<KeyFrame*>(lKFs.begin(),lKFs.end());
-    mvOrderedWeights = vector<int>(lWs.begin(), lWs.end());    
+    mvOrderedWeights = vector<int>(lWs.begin(), lWs.end());
 }
 
 set<KeyFrame*> KeyFrame::GetConnectedKeyFrames()
@@ -495,7 +495,7 @@ void KeyFrame::SetErase()
 
 
 void KeyFrame::SetBadFlag()
-{   
+{
     {
         boost::mutex::scoped_lock lock(mMutexConnections);
         if(mnId==0)

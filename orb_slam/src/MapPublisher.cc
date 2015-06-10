@@ -130,11 +130,11 @@ void MapPublisher::Refresh()
         vector<MapPoint*> vMapPoints = mpMap->GetAllMapPoints();
         vector<MapPoint*> vRefMapPoints = mpMap->GetReferenceMapPoints();
 
-        PublishMapPoints(vMapPoints, vRefMapPoints);   
+        PublishMapPoints(vMapPoints, vRefMapPoints);
         PublishKeyFrames(vKeyFrames);
 
         mpMap->ResetUpdated();
-    }    
+    }
 }
 
 void MapPublisher::PublishMapPoints(const vector<MapPoint*> &vpMPs, const vector<MapPoint*> &vpRefMPs)

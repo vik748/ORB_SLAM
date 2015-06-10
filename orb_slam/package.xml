@@ -2,7 +2,7 @@
   <name>orb_slam</name>
   <version>0.0.0</version>
   <description>orb_slam</description>
-  
+
   <maintainer email="raulmur@unizar.es">Raul Mur-Artal</maintainer>
   <author>Raul Mur-Artal</author>
   <license>GPLv3</license>

@@ -716,7 +716,7 @@ static void computeDescriptors(const Mat& image, vector<KeyPoint>& keypoints, Ma
 
 void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPoint>& _keypoints,
                       OutputArray _descriptors)
-{ 
+{
     if(_image.empty())
         return;
 

@@ -51,7 +51,7 @@ void LocalMapping::Run()
     {
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames())
-        {            
+        {
             // Tracking will see that Local Mapping is busy
             SetAcceptKeyFrames(false);
 
@@ -163,7 +163,7 @@ void LocalMapping::ProcessNewKeyFrame()
                 mlpRecentAddedMapPoints.push_back(pMP);
             }
         }
-    }  
+    }
 
     // Update links in the Covisibility Graph
     mpCurrentKeyFrame->UpdateConnections();

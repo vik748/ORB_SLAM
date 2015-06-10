@@ -96,7 +96,7 @@ protected:
 
     std::list<MapPoint*> mlpRecentAddedMapPoints;
 
-    boost::mutex mMutexNewKFs;    
+    boost::mutex mMutexNewKFs;
 
     bool mbAbortBA;
 

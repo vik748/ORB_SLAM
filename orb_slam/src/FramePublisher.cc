@@ -24,8 +24,8 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
-#include<boost/thread.hpp>
-#include<ros/ros.h>
+#include <boost/thread.hpp>
+#include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 
 namespace ORB_SLAM
@@ -75,7 +75,7 @@ cv::Mat FramePublisher::DrawFrame()
         mIm.copyTo(im);
 
         if(mState==Tracking::NOT_INITIALIZED)
-        {            
+        {
             vIniKeys = mvIniKeys;
         }
         else if(mState==Tracking::INITIALIZING)
@@ -108,7 +108,7 @@ cv::Mat FramePublisher::DrawFrame()
                 cv::line(im,vIniKeys[i].pt,vCurrentKeys[vMatches[i]].pt,
                         cv::Scalar(0,255,0));
             }
-        }        
+        }
     }
     else if(state==Tracking::WORKING) //TRACKING
     {

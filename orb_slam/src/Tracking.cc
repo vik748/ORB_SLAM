@@ -19,22 +19,22 @@
 */
 
 #include "Tracking.h"
-#include<ros/ros.h>
+#include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 
-#include<opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 
-#include"ORBmatcher.h"
-#include"FramePublisher.h"
-#include"Converter.h"
-#include"Map.h"
-#include"Initializer.h"
+#include "ORBmatcher.h"
+#include "FramePublisher.h"
+#include "Converter.h"
+#include "Map.h"
+#include "Initializer.h"
 
-#include"Optimizer.h"
-#include"PnPsolver.h"
+#include "Optimizer.h"
+#include "PnPsolver.h"
 
-#include<iostream>
-#include<fstream>
+#include <iostream>
+#include <fstream>
 
 
 using namespace std;
@@ -103,7 +103,7 @@ Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPubl
     int nFeatures = fSettings["ORBextractor.nFeatures"];
     float fScaleFactor = fSettings["ORBextractor.scaleFactor"];
     int nLevels = fSettings["ORBextractor.nLevels"];
-    int fastTh = fSettings["ORBextractor.fastTh"];    
+    int fastTh = fSettings["ORBextractor.fastTh"];
     int Score = fSettings["ORBextractor.nScoreType"];
 
     assert(Score==1 || Score==0);
@@ -123,7 +123,7 @@ Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPubl
 
     // ORB extractor for initialization
     // Initialization uses only points from the finest scale level
-    mpIniORBextractor = new ORBextractor(nFeatures*2,1.2,8,Score,fastTh);  
+    mpIniORBextractor = new ORBextractor(nFeatures*2,1.2,8,Score,fastTh);
 
     int nMotion = fSettings["UseMotionModel"];
     mbMotionModel = nMotion;
@@ -295,7 +295,7 @@ void Tracking::GrabImage(const sensor_msgs::ImageConstPtr& msg)
         }
 
         mLastFrame = Frame(mCurrentFrame);
-     }       
+     }
 
     // Update drawer
     mpFramePublisher->Update(this);
@@ -346,7 +346,7 @@ void Tracking::Initialize()
         fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
         mState = NOT_INITIALIZED;
         return;
-    }    
+    }
 
     // Find correspondences
     ORBmatcher matcher(0.9,true);
@@ -357,7 +357,7 @@ void Tracking::Initialize()
     {
         mState = NOT_INITIALIZED;
         return;
-    }  
+    }
 
     cv::Mat Rcw; // Current Camera Rotation
     cv::Mat tcw; // Current Camera Translation
@@ -371,7 +371,7 @@ void Tracking::Initialize()
             {
                 mvIniMatches[i]=-1;
                 nmatches--;
-            }           
+            }
         }
 
         CreateInitialMap(Rcw,tcw);
@@ -704,14 +704,14 @@ void Tracking::SearchReferencePointsInFrustum()
         if(pMP->mnLastFrameSeen == mCurrentFrame.mnId)
             continue;
         if(pMP->isBad())
-            continue;        
+            continue;
         // Project (this fills MapPoint variables for matching)
         if(mCurrentFrame.isInFrustum(pMP,0.5))
         {
             pMP->IncreaseVisible();
             nToMatch++;
         }
-    }    
+    }
 
 
     if(nToMatch>0)
@@ -726,7 +726,7 @@ void Tracking::SearchReferencePointsInFrustum()
 }
 
 void Tracking::UpdateReference()
-{    
+{
     // This is for visualization
     mpMap->SetReferenceMapPoints(mvpLocalMapPoints);
 
@@ -897,7 +897,7 @@ bool Tracking::Relocalisation()
                 vpPnPsolvers[i] = pSolver;
                 nCandidates++;
             }
-        }        
+        }
     }
 
     // Alternatively perform some iterations of P4P RANSAC
@@ -989,7 +989,7 @@ bool Tracking::Relocalisation()
 
                 // If the pose is supported by enough inliers stop ransacs and continue
                 if(nGood>=50)
-                {                    
+                {
                     bMatch = true;
                     break;
                 }

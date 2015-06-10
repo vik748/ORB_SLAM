@@ -245,7 +245,7 @@ void MapPoint::ComputeDistinctiveDescriptors()
 
     {
         boost::mutex::scoped_lock lock(mMutexFeatures);
-        mDescriptor = vDescriptors[BestIdx].clone();       
+        mDescriptor = vDescriptors[BestIdx].clone();
     }
 }
 
@@ -294,7 +294,7 @@ void MapPoint::UpdateNormalAndDepth()
         cv::Mat normali = mWorldPos - Owi;
         normal = normal + normali/cv::norm(normali);
         n++;
-    } 
+    }
 
     cv::Mat PC = Pos - pRefKF->GetCameraCenter();
     const float dist = cv::norm(PC);
