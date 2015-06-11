@@ -77,9 +77,9 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
 
         cv::Mat MPdescriptor = pMP->GetDescriptor();
 
-        int bestDist=INT_MAX;
-        int bestLevel= -1;
-        int bestDist2=INT_MAX;
+        int bestDist = INT_MAX;
+        int bestLevel = -1;
+        int bestDist2 = INT_MAX;
         int bestLevel2 = -1;
         int bestIdx =-1 ;
 
@@ -91,22 +91,22 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
             if(F.mvpMapPoints[idx])
                 continue;
 
-            cv::Mat d=F.mDescriptors.row(idx);
+            cv::Mat d = F.mDescriptors.row(idx);
 
             const int dist = DescriptorDistance(MPdescriptor,d);
 
             if(dist<bestDist)
             {
-                bestDist2=bestDist;
-                bestDist=dist;
+                bestDist2 = bestDist;
+                bestDist = dist;
                 bestLevel2 = bestLevel;
                 bestLevel = F.mvKeysUn[idx].octave;
-                bestIdx=idx;
+                bestIdx = idx;
             }
             else if(dist<bestDist2)
             {
                 bestLevel2 = F.mvKeysUn[idx].octave;
-                bestDist2=dist;
+                bestDist2 = dist;
             }
         }
 
@@ -116,7 +116,7 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
             if(bestLevel==bestLevel2 && bestDist>mfNNratio*bestDist2)
                 continue;
 
-            F.mvpMapPoints[bestIdx]=pMP;
+            F.mvpMapPoints[bestIdx] = pMP;
             nmatches++;
         }
     }
@@ -418,7 +418,7 @@ int ORBmatcher::WindowSearch(Frame &F1, Frame &F2, int windowSize, vector<MapPoi
     const float factor = 1.0f/HISTO_LENGTH;
 
     const bool bMinLevel = minScaleLevel>0;
-    const bool bMaxLevel= maxScaleLevel<INT_MAX;
+    const bool bMaxLevel = maxScaleLevel<INT_MAX;
 
     for(size_t i1=0, iend1=F1.mvpMapPoints.size(); i1<iend1; i1++)
     {
@@ -464,9 +464,9 @@ int ORBmatcher::WindowSearch(Frame &F1, Frame &F2, int windowSize, vector<MapPoi
 
             if(dist<bestDist)
             {
-                bestDist2=bestDist;
-                bestDist=dist;
-                bestIdx2=i2;
+                bestDist2 = bestDist;
+                bestDist = dist;
+                bestIdx2 = i2;
             } else if(dist<bestDist2)
             {
                 bestDist2=dist;
@@ -1011,6 +1011,64 @@ vector<cv::KeyPoint> &vMatchedKeys1, vector<cv::KeyPoint> &vMatchedKeys2, vector
     }
 
     return nmatches;
+}
+
+void ORBmatcher::CrossCheckMatching(const cv::Mat& desc1,
+                                    const cv::Mat& desc2,
+                                    double th,
+                                    std::vector<cv::DMatch>& matches)
+{
+    std::vector<cv::DMatch> matches12, matches21;
+    ThresholdMatching(desc1, desc2, th, matches12);
+    ThresholdMatching(desc2, desc1, th, matches21);
+
+    // Crosscheck
+    matches.clear();
+    for (size_t i = 0; i < matches12.size(); ++i)
+    {
+        bool matchFound = false;
+        const cv::DMatch& forwardMatch = matches12[i];
+        for (size_t j = 0; j < matches21.size() && matchFound == false; ++j)
+        {
+            const cv::DMatch& backwardMatch = matches21[j];
+            if (forwardMatch.trainIdx == backwardMatch.queryIdx &&
+                forwardMatch.queryIdx == backwardMatch.trainIdx)
+            {
+                matches.push_back(forwardMatch);
+                matchFound = true;
+            }
+        }
+    }
+}
+
+void ORBmatcher::ThresholdMatching(const cv::Mat& desc1,
+                                   const cv::Mat& desc2,
+                                   double th,
+                                   std::vector<cv::DMatch>& matches)
+{
+    matches.clear();
+    if (desc1.empty() || desc2.empty())
+      return;
+    assert(desc1.type() == desc2.type());
+    assert(desc1.cols == desc2.cols);
+
+    const int knn = 2;
+    cv::Ptr<cv::DescriptorMatcher> descriptorMatcher;
+
+    // Descriptor matcher
+    cv::Mat matchMask;
+    descriptorMatcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
+    std::vector<std::vector<cv::DMatch> > knnMatches;
+    descriptorMatcher->knnMatch(desc1, desc2, knnMatches, knn, matchMask);
+
+    for (size_t m = 0; m < knnMatches.size(); m++)
+    {
+        if (knnMatches[m].size() < 2) continue;
+        float dist1 = knnMatches[m][0].distance;
+        float dist2 = knnMatches[m][1].distance;
+        if (dist1 / dist2 < th)
+            matches.push_back(knnMatches[m][0]);
+    }
 }
 
 int ORBmatcher::Fuse(KeyFrame *pKF, vector<MapPoint *> &vpMapPoints, float th)

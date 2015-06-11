@@ -6,6 +6,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   sensor_msgs
   image_transport
+  image_geometry
   cv_bridge
   g2o
 )

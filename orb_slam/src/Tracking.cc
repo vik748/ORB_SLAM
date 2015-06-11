@@ -160,12 +160,23 @@ void Tracking::SetKeyFrameDatabase(KeyFrameDatabase *pKFDB)
 void Tracking::Run()
 {
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &Tracking::GrabImage, this);
+
+    // Mono
+    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &Tracking::GrabMono, this);
+
+    // Stereo
+    image_transport::ImageTransport it(nodeHandler);
+    leftSub     .subscribe(it, "/camera/left/image_raw",  1);
+    rightSub    .subscribe(it, "/camera/right/image_raw", 1);
+    leftInfoSub .subscribe(nodeHandler, "/camera/left/camera_info",  1);
+    rightInfoSub.subscribe(nodeHandler, "/camera/right/camera_info", 1);
+    sync.reset(new Sync(Sync(3), leftSub, rightSub, leftInfoSub, rightInfoSub) );
+    sync->registerCallback(bind(&Tracking::GrabStereo, this, _1, _2, _3, _4));
 
     ros::spin();
 }
 
-void Tracking::GrabImage(const sensor_msgs::ImageConstPtr& msg)
+void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg)
 {
 
     cv::Mat im;
@@ -227,7 +238,9 @@ void Tracking::GrabImage(const sensor_msgs::ImageConstPtr& msg)
         if(mState==WORKING && !RelocalisationRequested())
         {
             if(!mbMotionModel || mpMap->KeyFramesInMap()<4 || mVelocity.empty() || mCurrentFrame.mnId<mnLastRelocFrameId+2)
+            {
                 bOK = TrackPreviousFrame();
+            }
             else
             {
                 bOK = TrackWithMotionModel();
@@ -313,7 +326,174 @@ void Tracking::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 
         mTfBr.sendTransform(tf::StampedTransform(tfTcw,ros::Time::now(), "ORB_SLAM/World", "ORB_SLAM/Camera"));
     }
+}
 
+void Tracking::GrabStereo(const sensor_msgs::ImageConstPtr& left,
+                          const sensor_msgs::ImageConstPtr& right,
+                          const sensor_msgs::CameraInfoConstPtr& lInfo,
+                          const sensor_msgs::CameraInfoConstPtr& rInfo)
+{
+    cv::Mat lIm, rIm;
+
+    // Copy the ros image message to cv::Mat. Convert to grayscale if it is a color image.
+    cv_bridge::CvImageConstPtr cv_ptr_l, cv_ptr_r;
+    try
+    {
+        cv_ptr_l = cv_bridge::toCvShare(left);
+        cv_ptr_r = cv_bridge::toCvShare(right);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
+
+    ROS_ASSERT(cv_ptr_l->image.channels()==3 || cv_ptr_l->image.channels()==1);
+    ROS_ASSERT(cv_ptr_r->image.channels()==3 || cv_ptr_r->image.channels()==1);
+
+    if(cv_ptr_l->image.channels()==3)
+    {
+        if(mbRGB)
+        {
+            cvtColor(cv_ptr_l->image, lIm, CV_RGB2GRAY);
+            cvtColor(cv_ptr_r->image, rIm, CV_RGB2GRAY);
+        }
+        else
+        {
+            cvtColor(cv_ptr_l->image, lIm, CV_BGR2GRAY);
+            cvtColor(cv_ptr_r->image, rIm, CV_BGR2GRAY);
+        }
+    }
+    else if(cv_ptr_l->image.channels()==1)
+    {
+        cv_ptr_l->image.copyTo(lIm);
+        cv_ptr_r->image.copyTo(rIm);
+    }
+
+    if(mState==NO_IMAGES_YET)
+    {
+        mStereoCameraModel.fromCameraInfo(lInfo, rInfo);
+        mState = NOT_INITIALIZED;
+    }
+
+    mLastProcessedState=mState;
+
+    // The current frame is
+    mCurrentFrame = Frame(lIm,rIm,cv_ptr_l->header.stamp.toSec(),mpORBextractor,mpORBVocabulary,mK,mDistCoef,mStereoCameraModel);
+
+    if(mState==NOT_INITIALIZED)
+    {
+        FirstInitialization();
+
+        // Initialization stage is not required for stereo version
+        // mCurrentFrame is copied to mInitialFrame.
+        cv::Mat id = cv::Mat::eye(4,4,CV_32F);
+        cv::Mat Rcw = id.rowRange(0,3).colRange(0,3);
+        cv::Mat tcw = id.rowRange(0,3).col(3);
+        mvIniP3D = mCurrentFrame.mPoints3d;
+        mvIniMatches.clear();
+        for(size_t i=0; i<mCurrentFrame.mvKeysUn.size(); i++)
+            mvIniMatches.push_back(i);
+
+        CreateInitialMap(Rcw, tcw);
+    }
+    else
+    {
+        // Track Frame.
+        bool bOK;
+
+        // Initial Camera Pose Estimation from Previous Frame (Motion Model or Coarse) or Relocalisation
+        if(mState==WORKING && !RelocalisationRequested())
+        {
+            if(!mbMotionModel || mpMap->KeyFramesInMap()<4 || mVelocity.empty() || mCurrentFrame.mnId<mnLastRelocFrameId+2)
+            {
+                bOK = TrackPreviousFrame();
+            }
+            else
+            {
+                bOK = TrackWithMotionModel();
+                if(!bOK)
+                    bOK = TrackPreviousFrame();
+            }
+        }
+        else
+        {
+            bOK = Relocalisation();
+        }
+
+        // If we have an initial estimation of the camera pose and matching. Track the local map.
+        if(bOK)
+            bOK = TrackLocalMap();
+
+        // If tracking were good, check if we insert a keyframe
+        if(bOK)
+        {
+            mpMapPublisher->SetCurrentCameraPose(mCurrentFrame.mTcw);
+
+            if(NeedNewKeyFrame())
+                CreateNewKeyFrame();
+
+            // We allow points with high innovation (considererd outliers by the Huber Function)
+            // pass to the new keyframe, so that bundle adjustment will finally decide
+            // if they are outliers or not. We don't want next frame to estimate its position
+            // with those points so we discard them in the frame.
+            for(size_t i=0; i<mCurrentFrame.mvbOutlier.size();i++)
+            {
+                if(mCurrentFrame.mvpMapPoints[i] && mCurrentFrame.mvbOutlier[i])
+                    mCurrentFrame.mvpMapPoints[i]=NULL;
+            }
+        }
+
+        if(bOK)
+            mState = WORKING;
+        else
+            mState = LOST;
+
+        // Reset if the camera get lost soon after initialization
+        if(mState==LOST)
+        {
+            if(mpMap->KeyFramesInMap()<=5)
+            {
+                Reset();
+                return;
+            }
+        }
+
+        // Update motion model
+        if(mbMotionModel)
+        {
+            if(bOK && !mLastFrame.mTcw.empty())
+            {
+                cv::Mat LastRwc = mLastFrame.mTcw.rowRange(0,3).colRange(0,3).t();
+                cv::Mat Lasttwc = -LastRwc*mLastFrame.mTcw.rowRange(0,3).col(3);
+                cv::Mat LastTwc = cv::Mat::eye(4,4,CV_32F);
+                LastRwc.copyTo(LastTwc.rowRange(0,3).colRange(0,3));
+                Lasttwc.copyTo(LastTwc.rowRange(0,3).col(3));
+                mVelocity = mCurrentFrame.mTcw*LastTwc;
+            }
+            else
+                mVelocity = cv::Mat();
+        }
+
+        mLastFrame = Frame(mCurrentFrame);
+    }
+
+    // Update drawer
+    mpFramePublisher->Update(this);
+
+    if(!mCurrentFrame.mTcw.empty())
+    {
+        cv::Mat Rwc = mCurrentFrame.mTcw.rowRange(0,3).colRange(0,3).t();
+        cv::Mat twc = -Rwc*mCurrentFrame.mTcw.rowRange(0,3).col(3);
+        tf::Matrix3x3 M(Rwc.at<float>(0,0),Rwc.at<float>(0,1),Rwc.at<float>(0,2),
+                        Rwc.at<float>(1,0),Rwc.at<float>(1,1),Rwc.at<float>(1,2),
+                        Rwc.at<float>(2,0),Rwc.at<float>(2,1),Rwc.at<float>(2,2));
+        tf::Vector3 V(twc.at<float>(0), twc.at<float>(1), twc.at<float>(2));
+
+        tf::Transform tfTcw(M,V);
+
+        mTfBr.sendTransform(tf::StampedTransform(tfTcw,ros::Time::now(), "ORB_SLAM/World", "ORB_SLAM/Camera"));
+    }
 }
 
 
@@ -482,7 +662,6 @@ void Tracking::CreateInitialMap(cv::Mat &Rcw, cv::Mat &tcw)
     mState=WORKING;
 }
 
-
 bool Tracking::TrackPreviousFrame()
 {
     ORBmatcher matcher(0.9,true);
@@ -529,7 +708,6 @@ bool Tracking::TrackPreviousFrame()
     }
     else //Last opportunity
         nmatches = matcher.SearchByProjection(mLastFrame,mCurrentFrame,50,vpMapPointMatches);
-
 
     mCurrentFrame.mvpMapPoints=vpMapPointMatches;
 

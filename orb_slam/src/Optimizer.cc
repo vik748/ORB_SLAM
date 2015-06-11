@@ -75,7 +75,6 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
             maxKFid=pKF->mnId;
     }
 
-
     const float thHuber = sqrt(5.991);
 
     // SET MAP POINT VERTICES

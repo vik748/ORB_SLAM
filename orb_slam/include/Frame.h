@@ -29,6 +29,7 @@
 #include "ORBextractor.h"
 
 #include <opencv2/opencv.hpp>
+#include <image_geometry/stereo_camera_model.h>
 
 namespace ORB_SLAM
 {
@@ -46,12 +47,17 @@ public:
     Frame();
     Frame(const Frame &frame);
     Frame(cv::Mat &im, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef);
+    Frame(cv::Mat &lIm, cv::Mat &rIm, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const image_geometry::StereoCameraModel &stereoCameraModel);
 
     ORBVocabulary* mpORBvocabulary;
     ORBextractor* mpORBextractor;
 
-    // Frame image
+    // Mono image
     cv::Mat im;
+
+    // Stereo images
+    cv::Mat lIm;
+    cv::Mat rIm;
 
     // Frame timestamp
     double mTimeStamp;
@@ -77,6 +83,9 @@ public:
 
     // ORB descriptor, each row associated to a keypoint
     cv::Mat mDescriptors;
+
+    // 3D world points for the stereo verions
+    std::vector<cv::Point3f> mPoints3d;
 
     // MapPoints associated to keypoints, NULL pointer if not association
     std::vector<MapPoint*> mvpMapPoints;
@@ -128,7 +137,7 @@ public:
 
 private:
 
-    void UndistortKeyPoints();
+    void UndistortKeyPoints(const std::vector<cv::KeyPoint> &kps, std::vector<cv::KeyPoint> &ukps);
     void ComputeImageBounds();
 
     // Call UpdatePoseMatrices(), before using

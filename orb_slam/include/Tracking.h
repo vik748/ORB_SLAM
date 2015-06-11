@@ -25,6 +25,11 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/image_encodings.h>
+#include <image_transport/subscriber_filter.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/exact_time.h>
+#include <image_geometry/stereo_camera_model.h>
 
 #include "FramePublisher.h"
 #include "Map.h"
@@ -90,7 +95,12 @@ public:
 
 
 protected:
-    void GrabImage(const sensor_msgs::ImageConstPtr& msg);
+    void GrabMono(const sensor_msgs::ImageConstPtr& msg);
+
+    void GrabStereo(const sensor_msgs::ImageConstPtr& left,
+                    const sensor_msgs::ImageConstPtr& right,
+                    const sensor_msgs::CameraInfoConstPtr& lInfo,
+                    const sensor_msgs::CameraInfoConstPtr& rInfo);
 
     void FirstInitialization();
     void Initialize();
@@ -129,6 +139,9 @@ protected:
 
     // Initalization
     Initializer* mpInitializer;
+
+    // Stereo camera model
+    image_geometry::StereoCameraModel mStereoCameraModel;
 
     //Local Map
     KeyFrame* mpReferenceKF;
@@ -180,6 +193,17 @@ protected:
 
     // Transfor broadcaster (for visualization in rviz)
     tf::TransformBroadcaster mTfBr;
+
+    // Stereo image transport
+    image_transport::SubscriberFilter leftSub, rightSub;
+    message_filters::Subscriber<sensor_msgs::CameraInfo> leftInfoSub, rightInfoSub;
+
+    typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
+                                                      sensor_msgs::Image,
+                                                      sensor_msgs::CameraInfo,
+                                                      sensor_msgs::CameraInfo> PolicyStereo;
+    typedef message_filters::Synchronizer<PolicyStereo> Sync;
+    boost::shared_ptr<Sync> sync;
 };
 
 } //namespace ORB_SLAM

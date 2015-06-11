@@ -20,6 +20,7 @@
 
 #include "Frame.h"
 #include "Converter.h"
+#include "ORBmatcher.h"
 
 #include <ros/ros.h>
 
@@ -65,7 +66,7 @@ Frame::Frame(cv::Mat &im_, const double &timeStamp, ORBextractor* extractor, ORB
 
     mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
 
-    UndistortKeyPoints();
+    UndistortKeyPoints(mvKeys, mvKeysUn);
 
 
     // This is done for the first created Frame
@@ -124,6 +125,126 @@ Frame::Frame(cv::Mat &im_, const double &timeStamp, ORBextractor* extractor, ORB
 
     mvbOutlier = vector<bool>(N,false);
 
+}
+
+Frame::Frame(cv::Mat &lIm_, cv::Mat &rIm_, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const image_geometry::StereoCameraModel &stereoCameraModel)
+    :mpORBvocabulary(voc),mpORBextractor(extractor), lIm(lIm_), rIm(rIm_), mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone())
+{
+    // For visualization and common purposes
+    lIm.copyTo(im);
+
+    // Exctract ORB
+    std::vector<cv::KeyPoint> mvKeysLeft, mvKeysRight;
+    std::vector<cv::KeyPoint> mvKeysUnLeft, mvKeysUnRight;
+    cv::Mat mDescriptorsLeft, mDescriptorsRight;
+    (*mpORBextractor)(lIm,cv::Mat(),mvKeysLeft,mDescriptorsLeft);
+    (*mpORBextractor)(rIm,cv::Mat(),mvKeysRight,mDescriptorsRight);
+
+    if(mvKeysLeft.empty() || mvKeysRight.empty())
+        return;
+
+    UndistortKeyPoints(mvKeysLeft, mvKeysUnLeft);
+    UndistortKeyPoints(mvKeysRight, mvKeysUnRight);
+
+    // This is done for the first created Frame
+    if(mbInitialComputations)
+    {
+        ComputeImageBounds();
+
+        mfGridElementWidthInv=static_cast<float>(FRAME_GRID_COLS)/static_cast<float>(mnMaxX-mnMinX);
+        mfGridElementHeightInv=static_cast<float>(FRAME_GRID_ROWS)/static_cast<float>(mnMaxY-mnMinY);
+
+        fx = K.at<float>(0,0);
+        fy = K.at<float>(1,1);
+        cx = K.at<float>(0,2);
+        cy = K.at<float>(1,2);
+
+        mbInitialComputations=false;
+    }
+
+
+    mnId=nNextId++;
+
+    // Left/right matching
+    std::vector<cv::DMatch> matches, matchesFiltered;
+    ORBmatcher::CrossCheckMatching(mDescriptorsLeft, mDescriptorsRight, 0.99, matches);
+
+    if (matches.empty())
+        return;
+
+    // Filter matches by epipolar
+    for (size_t i = 0; i < matches.size(); ++i)
+    {
+        if (abs(mvKeysUnLeft[matches[i].queryIdx].pt.y - mvKeysUnRight[matches[i].trainIdx].pt.y) < 3.5)
+            matchesFiltered.push_back(matches[i]);
+    }
+
+    if (matchesFiltered.empty())
+        return;
+
+    // Compute 3D points
+    mvKeys.clear();
+    mvKeysUn.clear();
+    mPoints3d.clear();
+    mDescriptors.release();
+    for (size_t i=0; i<matchesFiltered.size(); ++i)
+    {
+        cv::Point3d worldPoint;
+        int indexLeft = matchesFiltered[i].queryIdx;
+        int indexRight = matchesFiltered[i].trainIdx;
+
+        cv::Point2d leftP = mvKeysUnLeft[indexLeft].pt;
+        cv::Point2d rightP = mvKeysUnRight[indexRight].pt;
+
+        double disparity = leftP.x - rightP.x;
+        stereoCameraModel.projectDisparityTo3d(leftP, disparity, worldPoint);
+
+        // Save
+        mvKeys.push_back(mvKeysLeft[indexLeft]);
+        mvKeysUn.push_back(mvKeysUnLeft[indexLeft]);
+        mDescriptors.push_back(mDescriptorsLeft.row(indexLeft));
+        mPoints3d.push_back(worldPoint);
+    }
+
+    // Reset the map points
+    N = mvKeys.size();
+    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
+
+    //Scale Levels Info
+    mnScaleLevels = mpORBextractor->GetLevels();
+    mfScaleFactor = mpORBextractor->GetScaleFactor();
+
+    mvScaleFactors.resize(mnScaleLevels);
+    mvLevelSigma2.resize(mnScaleLevels);
+    mvScaleFactors[0]=1.0f;
+    mvLevelSigma2[0]=1.0f;
+    for(int i=1; i<mnScaleLevels; i++)
+    {
+        mvScaleFactors[i]=mvScaleFactors[i-1]*mfScaleFactor;
+        mvLevelSigma2[i]=mvScaleFactors[i]*mvScaleFactors[i];
+    }
+
+    mvInvLevelSigma2.resize(mvLevelSigma2.size());
+    for(int i=0; i<mnScaleLevels; i++)
+        mvInvLevelSigma2[i]=1/mvLevelSigma2[i];
+
+    // Assign Features to Grid Cells
+    int nReserve = 0.5*N/(FRAME_GRID_COLS*FRAME_GRID_ROWS);
+    for(unsigned int i=0; i<FRAME_GRID_COLS;i++)
+        for (unsigned int j=0; j<FRAME_GRID_ROWS;j++)
+            mGrid[i][j].reserve(nReserve);
+
+
+    for(size_t i=0;i<mvKeysUn.size();i++)
+    {
+        cv::KeyPoint &kp = mvKeysUn[i];
+
+        int nGridPosX, nGridPosY;
+        if(PosInGrid(kp,nGridPosX,nGridPosY))
+            mGrid[nGridPosX][nGridPosY].push_back(i);
+    }
+
+    mvbOutlier = vector<bool>(N,false);
 }
 
 void Frame::UpdatePoseMatrices()
@@ -285,20 +406,20 @@ void Frame::ComputeBoW()
     }
 }
 
-void Frame::UndistortKeyPoints()
+void Frame::UndistortKeyPoints(const std::vector<cv::KeyPoint> &kps, std::vector<cv::KeyPoint> &ukps)
 {
     if(mDistCoef.at<float>(0)==0.0)
     {
-        mvKeysUn=mvKeys;
+        ukps=kps;
         return;
     }
 
     // Fill matrix with points
-    cv::Mat mat(mvKeys.size(),2,CV_32F);
-    for(unsigned int i=0; i<mvKeys.size(); i++)
+    cv::Mat mat(kps.size(),2,CV_32F);
+    for(unsigned int i=0; i<kps.size(); i++)
     {
-        mat.at<float>(i,0)=mvKeys[i].pt.x;
-        mat.at<float>(i,1)=mvKeys[i].pt.y;
+        mat.at<float>(i,0)=kps[i].pt.x;
+        mat.at<float>(i,1)=kps[i].pt.y;
     }
 
     // Undistort points
@@ -307,13 +428,13 @@ void Frame::UndistortKeyPoints()
     mat=mat.reshape(1);
 
     // Fill undistorted keypoint vector
-    mvKeysUn.resize(mvKeys.size());
-    for(unsigned int i=0; i<mvKeys.size(); i++)
+    ukps.resize(kps.size());
+    for(unsigned int i=0; i<kps.size(); i++)
     {
-        cv::KeyPoint kp = mvKeys[i];
+        cv::KeyPoint kp = kps[i];
         kp.pt.x=mat.at<float>(i,0);
         kp.pt.y=mat.at<float>(i,1);
-        mvKeysUn[i]=kp;
+        ukps[i]=kp;
     }
 }
 
@@ -336,7 +457,6 @@ void Frame::ComputeImageBounds()
         mnMaxX = max(ceil(mat.at<float>(1,0)),ceil(mat.at<float>(3,0)));
         mnMinY = min(floor(mat.at<float>(0,1)),floor(mat.at<float>(1,1)));
         mnMaxY = max(ceil(mat.at<float>(2,1)),ceil(mat.at<float>(3,1)));
-
     }
     else
     {
