@@ -28,7 +28,7 @@ namespace ORB_SLAM
 {
 long unsigned int Frame::nNextId=0;
 bool Frame::mbInitialComputations=true;
-float Frame::cx, Frame::cy, Frame::fx, Frame::fy;
+float Frame::cx, Frame::cy, Frame::fx, Frame::fy, Frame::cxR, Frame::cyR, Frame::fxR, Frame::fyR;
 int Frame::mnMinX, Frame::mnMinY, Frame::mnMaxX, Frame::mnMaxY;
 
 Frame::Frame()
@@ -37,8 +37,9 @@ Frame::Frame()
 //Copy Constructor
 Frame::Frame(const Frame &frame)
     :mpORBvocabulary(frame.mpORBvocabulary), mpORBextractor(frame.mpORBextractor), im(frame.im.clone()), mTimeStamp(frame.mTimeStamp),
-     mK(frame.mK.clone()), mDistCoef(frame.mDistCoef.clone()), N(frame.N), mvKeys(frame.mvKeys), mvKeysUn(frame.mvKeysUn),
-     mBowVec(frame.mBowVec), mFeatVec(frame.mFeatVec), mDescriptors(frame.mDescriptors.clone()),
+     mK(frame.mK.clone()), mDistCoef(frame.mDistCoef.clone()), mKr(frame.mKr.clone()), mDistCoefR(frame.mDistCoefR.clone()),
+     mBaseline(frame.mBaseline), N(frame.N), mvKeys(frame.mvKeys), mvKeysUn(frame.mvKeysUn),
+     mBowVec(frame.mBowVec), mFeatVec(frame.mFeatVec), mDescriptors(frame.mDescriptors.clone()), mPoints3d(frame.mPoints3d),
      mvpMapPoints(frame.mvpMapPoints), mvbOutlier(frame.mvbOutlier),
      mfGridElementWidthInv(frame.mfGridElementWidthInv), mfGridElementHeightInv(frame.mfGridElementHeightInv),mnId(frame.mnId),
      mpReferenceKF(frame.mpReferenceKF), mnScaleLevels(frame.mnScaleLevels), mfScaleFactor(frame.mfScaleFactor),
@@ -127,8 +128,8 @@ Frame::Frame(cv::Mat &im_, const double &timeStamp, ORBextractor* extractor, ORB
 
 }
 
-Frame::Frame(cv::Mat &lIm_, cv::Mat &rIm_, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const image_geometry::StereoCameraModel &stereoCameraModel)
-    :mpORBvocabulary(voc),mpORBextractor(extractor), lIm(lIm_), rIm(rIm_), mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone())
+Frame::Frame(cv::Mat &lIm_, cv::Mat &rIm_, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, cv::Mat &Kr, cv::Mat &distCoefR, float baseline)
+    :mpORBvocabulary(voc),mpORBextractor(extractor), lIm(lIm_), rIm(rIm_), mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mKr(Kr.clone()), mDistCoefR(distCoefR.clone()), mBaseline(baseline)
 {
     // For visualization and common purposes
     lIm.copyTo(im);
@@ -159,6 +160,11 @@ Frame::Frame(cv::Mat &lIm_, cv::Mat &rIm_, const double &timeStamp, ORBextractor
         cx = K.at<float>(0,2);
         cy = K.at<float>(1,2);
 
+        fxR = Kr.at<float>(0,0);
+        fyR = Kr.at<float>(1,1);
+        cxR = Kr.at<float>(0,2);
+        cyR = Kr.at<float>(1,2);
+
         mbInitialComputations=false;
     }
 
@@ -167,7 +173,7 @@ Frame::Frame(cv::Mat &lIm_, cv::Mat &rIm_, const double &timeStamp, ORBextractor
 
     // Left/right matching
     std::vector<cv::DMatch> matches, matchesFiltered;
-    ORBmatcher::CrossCheckMatching(mDescriptorsLeft, mDescriptorsRight, 0.99, matches);
+    ORBmatcher::RatioMatching(mDescriptorsLeft, mDescriptorsRight, 0.99, matches);
 
     if (matches.empty())
         return;
@@ -175,7 +181,7 @@ Frame::Frame(cv::Mat &lIm_, cv::Mat &rIm_, const double &timeStamp, ORBextractor
     // Filter matches by epipolar
     for (size_t i = 0; i < matches.size(); ++i)
     {
-        if (abs(mvKeysUnLeft[matches[i].queryIdx].pt.y - mvKeysUnRight[matches[i].trainIdx].pt.y) < 3.5)
+        if (abs(mvKeysUnLeft[matches[i].queryIdx].pt.y - mvKeysUnRight[matches[i].trainIdx].pt.y) < 2.5)
             matchesFiltered.push_back(matches[i]);
     }
 
@@ -197,13 +203,18 @@ Frame::Frame(cv::Mat &lIm_, cv::Mat &rIm_, const double &timeStamp, ORBextractor
         cv::Point2d rightP = mvKeysUnRight[indexRight].pt;
 
         double disparity = leftP.x - rightP.x;
-        stereoCameraModel.projectDisparityTo3d(leftP, disparity, worldPoint);
+        cv::Point3d xyz(leftP.x - cxR, leftP.y - cyR, fxR);
+        double w = (1.0/mBaseline)*disparity + (cxR - cx)/mBaseline;
+        worldPoint = xyz * (1.0/w);
 
         // Save
-        mvKeys.push_back(mvKeysLeft[indexLeft]);
-        mvKeysUn.push_back(mvKeysUnLeft[indexLeft]);
-        mDescriptors.push_back(mDescriptorsLeft.row(indexLeft));
-        mPoints3d.push_back(worldPoint);
+        if ( isfinite(worldPoint.x) && isfinite(worldPoint.y) && isfinite(worldPoint.z) && worldPoint.z > 0)
+        {
+            mvKeys.push_back(mvKeysLeft[indexLeft]);
+            mvKeysUn.push_back(mvKeysUnLeft[indexLeft]);
+            mDescriptors.push_back(mDescriptorsLeft.row(indexLeft));
+            mPoints3d.push_back(worldPoint);
+        }
     }
 
     // Reset the map points

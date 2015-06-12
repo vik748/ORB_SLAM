@@ -1013,61 +1013,24 @@ vector<cv::KeyPoint> &vMatchedKeys1, vector<cv::KeyPoint> &vMatchedKeys2, vector
     return nmatches;
 }
 
-void ORBmatcher::CrossCheckMatching(const cv::Mat& desc1,
-                                    const cv::Mat& desc2,
-                                    double th,
-                                    std::vector<cv::DMatch>& matches)
+
+void ORBmatcher::RatioMatching(const cv::Mat& desc1,
+                               const cv::Mat& desc2,
+                               double th,
+                               std::vector<cv::DMatch>& matches)
 {
-    std::vector<cv::DMatch> matches12, matches21;
-    ThresholdMatching(desc1, desc2, th, matches12);
-    ThresholdMatching(desc2, desc1, th, matches21);
-
-    // Crosscheck
-    matches.clear();
-    for (size_t i = 0; i < matches12.size(); ++i)
-    {
-        bool matchFound = false;
-        const cv::DMatch& forwardMatch = matches12[i];
-        for (size_t j = 0; j < matches21.size() && matchFound == false; ++j)
-        {
-            const cv::DMatch& backwardMatch = matches21[j];
-            if (forwardMatch.trainIdx == backwardMatch.queryIdx &&
-                forwardMatch.queryIdx == backwardMatch.trainIdx)
-            {
-                matches.push_back(forwardMatch);
-                matchFound = true;
-            }
-        }
-    }
-}
-
-void ORBmatcher::ThresholdMatching(const cv::Mat& desc1,
-                                   const cv::Mat& desc2,
-                                   double th,
-                                   std::vector<cv::DMatch>& matches)
-{
-    matches.clear();
-    if (desc1.empty() || desc2.empty())
-      return;
-    assert(desc1.type() == desc2.type());
-    assert(desc1.cols == desc2.cols);
-
+    cv::Mat matchMask;
     const int knn = 2;
     cv::Ptr<cv::DescriptorMatcher> descriptorMatcher;
-
-    // Descriptor matcher
-    cv::Mat matchMask;
     descriptorMatcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
     std::vector<std::vector<cv::DMatch> > knnMatches;
     descriptorMatcher->knnMatch(desc1, desc2, knnMatches, knn, matchMask);
 
-    for (size_t m = 0; m < knnMatches.size(); m++)
+    for (unsigned m = 0; m < knnMatches.size(); m++)
     {
-        if (knnMatches[m].size() < 2) continue;
-        float dist1 = knnMatches[m][0].distance;
-        float dist2 = knnMatches[m][1].distance;
-        if (dist1 / dist2 < th)
-            matches.push_back(knnMatches[m][0]);
+      if (knnMatches[m].size() < 2) continue;
+      if (knnMatches[m][0].distance <= knnMatches[m][1].distance * th)
+        matches.push_back(knnMatches[m][0]);
     }
 }
 

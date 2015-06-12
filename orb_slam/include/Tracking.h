@@ -90,12 +90,12 @@ public:
     std::vector<cv::Point3f> mvIniP3D;
     Frame mInitialFrame;
 
-
     void CheckResetByPublishers();
 
 
 protected:
-    void GrabMono(const sensor_msgs::ImageConstPtr& msg);
+    void GrabMono(const sensor_msgs::ImageConstPtr& msg,
+                  const sensor_msgs::CameraInfoConstPtr& info);
 
     void GrabStereo(const sensor_msgs::ImageConstPtr& left,
                     const sensor_msgs::ImageConstPtr& right,
@@ -140,8 +140,8 @@ protected:
     // Initalization
     Initializer* mpInitializer;
 
-    // Stereo camera model
-    image_geometry::StereoCameraModel mStereoCameraModel;
+    // 0 = mono, 1 = stereo
+    int mStereo;
 
     //Local Map
     KeyFrame* mpReferenceKF;
@@ -155,9 +155,10 @@ protected:
     //Map
     Map* mpMap;
 
-    //Calibration matrix
-    cv::Mat mK;
-    cv::Mat mDistCoef;
+    //Camera information
+    cv::Mat mK, mKr;
+    cv::Mat mDistCoef, mDistCoefR;
+    float mBaseline;
 
     //New KeyFrame rules (according to fps)
     int mMinFrames;
@@ -194,16 +195,21 @@ protected:
     // Transfor broadcaster (for visualization in rviz)
     tf::TransformBroadcaster mTfBr;
 
-    // Stereo image transport
-    image_transport::SubscriberFilter leftSub, rightSub;
-    message_filters::Subscriber<sensor_msgs::CameraInfo> leftInfoSub, rightInfoSub;
+    // Image sync
+    image_transport::SubscriberFilter monoSub, leftSub, rightSub;
+    message_filters::Subscriber<sensor_msgs::CameraInfo> infoSub, leftInfoSub, rightInfoSub;
+
+    typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
+                                                      sensor_msgs::CameraInfo> PolicyMono;
+    typedef message_filters::Synchronizer<PolicyMono> SyncMono;
+    boost::shared_ptr<SyncMono> syncMono;
 
     typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
                                                       sensor_msgs::Image,
                                                       sensor_msgs::CameraInfo,
                                                       sensor_msgs::CameraInfo> PolicyStereo;
-    typedef message_filters::Synchronizer<PolicyStereo> Sync;
-    boost::shared_ptr<Sync> sync;
+    typedef message_filters::Synchronizer<PolicyStereo> SyncStereo;
+    boost::shared_ptr<SyncStereo> syncStereo;
 };
 
 } //namespace ORB_SLAM

@@ -103,6 +103,7 @@ public:
     int GetKeyPointScaleLevel(const size_t &idx) const;
     std::vector<cv::KeyPoint> GetKeyPoints() const;
     std::vector<cv::KeyPoint> GetKeyPointsUn() const;
+    std::vector<cv::Point3f> Get3dPoints() const;
     cv::Mat GetDescriptors();
     std::vector<size_t> GetFeaturesInArea(const float &x, const float  &y, const float  &r) const;
 
@@ -193,10 +194,11 @@ protected:
     int mnMaxY;
     cv::Mat mK;
 
-    // KeyPoints, Descriptors, MapPoints vectors (all associated by an index)
+    // KeyPoints, Descriptors, Points3D, MapPoints vectors (all associated by an index)
     std::vector<cv::KeyPoint> mvKeys;
     std::vector<cv::KeyPoint> mvKeysUn;
     cv::Mat mDescriptors;
+    std::vector<cv::Point3f> mPoints3d;
     std::vector<MapPoint*> mvpMapPoints;
 
     // BoW

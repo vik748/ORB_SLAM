@@ -29,7 +29,6 @@
 #include "ORBextractor.h"
 
 #include <opencv2/opencv.hpp>
-#include <image_geometry/stereo_camera_model.h>
 
 namespace ORB_SLAM
 {
@@ -47,7 +46,7 @@ public:
     Frame();
     Frame(const Frame &frame);
     Frame(cv::Mat &im, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef);
-    Frame(cv::Mat &lIm, cv::Mat &rIm, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const image_geometry::StereoCameraModel &stereoCameraModel);
+    Frame(cv::Mat &lIm, cv::Mat &rIm, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, cv::Mat &Kr, cv::Mat &distCoefR, float baseline);
 
     ORBVocabulary* mpORBvocabulary;
     ORBextractor* mpORBextractor;
@@ -69,6 +68,15 @@ public:
     static float cx;
     static float cy;
     cv::Mat mDistCoef;
+
+    // Same for stereo version
+    cv::Mat mKr;
+    static float fxR;
+    static float fyR;
+    static float cxR;
+    static float cyR;
+    cv::Mat mDistCoefR;
+    float mBaseline;
 
     // Number of KeyPoints
     int N;

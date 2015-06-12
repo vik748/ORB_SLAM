@@ -22,6 +22,9 @@
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 
+#include <image_geometry/stereo_camera_model.h>
+#include <image_geometry/pinhole_camera_model.h>
+
 #include <opencv2/opencv.hpp>
 
 #include "ORBmatcher.h"
@@ -50,24 +53,6 @@ Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPubl
     // Load camera parameters from settings file
 
     cv::FileStorage fSettings(strSettingPath, cv::FileStorage::READ);
-    float fx = fSettings["Camera.fx"];
-    float fy = fSettings["Camera.fy"];
-    float cx = fSettings["Camera.cx"];
-    float cy = fSettings["Camera.cy"];
-
-    cv::Mat K = cv::Mat::eye(3,3,CV_32F);
-    K.at<float>(0,0) = fx;
-    K.at<float>(1,1) = fy;
-    K.at<float>(0,2) = cx;
-    K.at<float>(1,2) = cy;
-    K.copyTo(mK);
-
-    cv::Mat DistCoef(4,1,CV_32F);
-    DistCoef.at<float>(0) = fSettings["Camera.k1"];
-    DistCoef.at<float>(1) = fSettings["Camera.k2"];
-    DistCoef.at<float>(2) = fSettings["Camera.p1"];
-    DistCoef.at<float>(3) = fSettings["Camera.p2"];
-    DistCoef.copyTo(mDistCoef);
 
     float fps = fSettings["Camera.fps"];
     if(fps==0)
@@ -77,29 +62,27 @@ Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPubl
     mMinFrames = 0;
     mMaxFrames = 18*fps/30;
 
-
-    cout << "Camera Parameters: " << endl;
-    cout << "- fx: " << fx << endl;
-    cout << "- fy: " << fy << endl;
-    cout << "- cx: " << cx << endl;
-    cout << "- cy: " << cy << endl;
-    cout << "- k1: " << DistCoef.at<float>(0) << endl;
-    cout << "- k2: " << DistCoef.at<float>(1) << endl;
-    cout << "- p1: " << DistCoef.at<float>(2) << endl;
-    cout << "- p2: " << DistCoef.at<float>(3) << endl;
-    cout << "- fps: " << fps << endl;
-
-
     int nRGB = fSettings["Camera.RGB"];
     mbRGB = nRGB;
 
+    cout << "Camera Parameters: " << endl;
+    cout << "- fps: " << fps << endl;
     if(mbRGB)
         cout << "- color order: RGB (ignored if grayscale)" << endl;
     else
         cout << "- color order: BGR (ignored if grayscale)" << endl;
 
-    // Load ORB parameters
+    // Is stereo?
+    mStereo = fSettings["Camera.Stereo"];
+    if (mStereo != 0 && mStereo != 1)
+        mStereo = 0;
 
+    if(mStereo == 0)
+        cout << "- camera: MONO" << endl;
+    else
+        cout << "- camera: STEREO" << endl;
+
+    // Load ORB parameters
     int nFeatures = fSettings["ORBextractor.nFeatures"];
     float fScaleFactor = fSettings["ORBextractor.scaleFactor"];
     int nLevels = fSettings["ORBextractor.nLevels"];
@@ -145,6 +128,7 @@ Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPubl
 void Tracking::SetLocalMapper(LocalMapping *pLocalMapper)
 {
     mpLocalMapper=pLocalMapper;
+    mpLocalMapper->setStereo((bool)mStereo);
 }
 
 void Tracking::SetLoopClosing(LoopClosing *pLoopClosing)
@@ -160,25 +144,31 @@ void Tracking::SetKeyFrameDatabase(KeyFrameDatabase *pKFDB)
 void Tracking::Run()
 {
     ros::NodeHandle nodeHandler;
+    image_transport::ImageTransport it(nodeHandler);
+
+    // The selection of mono or stereo version is automatic, depending on the
+    // topic subscriptions.
 
     // Mono
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &Tracking::GrabMono, this);
+    monoSub.subscribe(it, "/camera/image_raw",  1);
+    infoSub.subscribe(nodeHandler, "/camera/camera_info",  1);
+    syncMono.reset(new SyncMono(SyncMono(3), monoSub, infoSub) );
+    syncMono->registerCallback(bind(&Tracking::GrabMono, this, _1, _2));
 
     // Stereo
-    image_transport::ImageTransport it(nodeHandler);
     leftSub     .subscribe(it, "/camera/left/image_raw",  1);
     rightSub    .subscribe(it, "/camera/right/image_raw", 1);
     leftInfoSub .subscribe(nodeHandler, "/camera/left/camera_info",  1);
     rightInfoSub.subscribe(nodeHandler, "/camera/right/camera_info", 1);
-    sync.reset(new Sync(Sync(3), leftSub, rightSub, leftInfoSub, rightInfoSub) );
-    sync->registerCallback(bind(&Tracking::GrabStereo, this, _1, _2, _3, _4));
+    syncStereo.reset(new SyncStereo(SyncStereo(3), leftSub, rightSub, leftInfoSub, rightInfoSub) );
+    syncStereo->registerCallback(bind(&Tracking::GrabStereo, this, _1, _2, _3, _4));
 
     ros::spin();
 }
 
-void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg)
+void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg,
+                        const sensor_msgs::CameraInfoConstPtr& info)
 {
-
     cv::Mat im;
 
     // Copy the ros image message to cv::Mat. Convert to grayscale if it is a color image.
@@ -216,6 +206,18 @@ void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg)
 
     if(mState==NO_IMAGES_YET)
     {
+        // Read the camera parameters from CameraInfo message
+        image_geometry::PinholeCameraModel pinholeCameraModel;
+        pinholeCameraModel.fromCameraInfo(info);
+        cv::Mat K = cv::Mat::eye(3,3,CV_32F);
+        K.at<float>(0,0) = pinholeCameraModel.fx();
+        K.at<float>(1,1) = pinholeCameraModel.fy();
+        K.at<float>(0,2) = pinholeCameraModel.cx();
+        K.at<float>(1,2) = pinholeCameraModel.cy();
+        K.copyTo(mK);
+        cv::Mat distCoef(pinholeCameraModel.distortionCoeffs().colRange(0,4).t());
+        distCoef.copyTo(mDistCoef);
+
         mState = NOT_INITIALIZED;
     }
 
@@ -372,14 +374,44 @@ void Tracking::GrabStereo(const sensor_msgs::ImageConstPtr& left,
 
     if(mState==NO_IMAGES_YET)
     {
-        mStereoCameraModel.fromCameraInfo(lInfo, rInfo);
+        // Read the camera parameters from CameraInfo message
+        image_geometry::StereoCameraModel stereoCameraModel;
+        image_geometry::PinholeCameraModel pinholeCameraModel;
+        stereoCameraModel.fromCameraInfo(lInfo, rInfo);
+
+        mBaseline = stereoCameraModel.baseline();
+
+        // Left
+        pinholeCameraModel = stereoCameraModel.left();
+        cv::Mat K = cv::Mat::eye(3,3,CV_32F);
+        K.at<float>(0,0) = pinholeCameraModel.fx();
+        K.at<float>(1,1) = pinholeCameraModel.fy();
+        K.at<float>(0,2) = pinholeCameraModel.cx();
+        K.at<float>(1,2) = pinholeCameraModel.cy();
+        K.copyTo(mK);
+        cv::Mat distCoef = cv::Mat::zeros(4,1,CV_32F);
+        //cv::Mat distCoef(pinholeCameraModel.distortionCoeffs().colRange(0,4).t());
+        distCoef.copyTo(mDistCoef);
+
+        // Right
+        pinholeCameraModel = stereoCameraModel.right();
+        cv::Mat Kr = cv::Mat::eye(3,3,CV_32F);
+        Kr.at<float>(0,0) = pinholeCameraModel.fx();
+        Kr.at<float>(1,1) = pinholeCameraModel.fy();
+        Kr.at<float>(0,2) = pinholeCameraModel.cx();
+        Kr.at<float>(1,2) = pinholeCameraModel.cy();
+        Kr.copyTo(mKr);
+        //cv::Mat distCoefR(pinholeCameraModel.distortionCoeffs().colRange(0,4).t());
+        cv::Mat distCoefR = cv::Mat::zeros(4,1,CV_32F);
+        distCoefR.copyTo(mDistCoefR);
+
         mState = NOT_INITIALIZED;
     }
 
     mLastProcessedState=mState;
 
     // The current frame is
-    mCurrentFrame = Frame(lIm,rIm,cv_ptr_l->header.stamp.toSec(),mpORBextractor,mpORBVocabulary,mK,mDistCoef,mStereoCameraModel);
+    mCurrentFrame = Frame(lIm,rIm,cv_ptr_l->header.stamp.toSec(),mpORBextractor,mpORBVocabulary,mK,mDistCoef,mKr,mDistCoefR,mBaseline);
 
     if(mState==NOT_INITIALIZED)
     {
