@@ -20,12 +20,19 @@
 
 #include "Tracking.h"
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <cv_bridge/cv_bridge.h>
 
 #include <image_geometry/stereo_camera_model.h>
 #include <image_geometry/pinhole_camera_model.h>
 
+#include <pcl/common/common.h>
+#include <pcl/filters/filter.h>
+#include <pcl/filters/approximate_voxel_grid.h>
+
 #include <opencv2/opencv.hpp>
+
+#include <boost/filesystem.hpp>
 
 #include "ORBmatcher.h"
 #include "FramePublisher.h"
@@ -39,15 +46,16 @@
 #include <iostream>
 #include <fstream>
 
-
 using namespace std;
+using namespace boost;
+namespace fs=filesystem;
 
 namespace ORB_SLAM
 {
 
 
 Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPublisher *pMapPublisher, Map *pMap, string strSettingPath):
-    mState(NO_IMAGES_YET), mpORBVocabulary(pVoc), mpFramePublisher(pFramePublisher), mpMapPublisher(pMapPublisher), mpMap(pMap),
+    mState(NO_IMAGES_YET), mpORBVocabulary(pVoc), mCloud(new PointCloudRGB), mpFramePublisher(pFramePublisher), mpMapPublisher(pMapPublisher), mpMap(pMap),
     mnLastRelocFrameId(0), mbPublisherStopped(false), mbReseting(false), mbForceRelocalisation(false), mbMotionModel(false)
 {
     // Load camera parameters from settings file
@@ -96,6 +104,19 @@ Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPubl
     {
         mStereo = false;
         cout << "- camera: MONO" << endl;
+    }
+
+    if (mStereo)
+    {
+        // Create the directory where stereo pointclouds will be saved
+        string cloudsDir = ros::package::getPath("orb_slam")+"/"+"clouds";
+        if (fs::is_directory(cloudsDir))
+            fs::remove_all(cloudsDir);
+        fs::path dir(cloudsDir);
+        if (!fs::create_directory(dir))
+            ROS_ERROR("ERROR -> Impossible to create the clouds directory.");
+        else
+            cout << "Clouds directory created successfully: " << cloudsDir;
     }
 
     // Load ORB parameters
@@ -166,18 +187,19 @@ void Tracking::Run()
     // topic subscriptions.
 
     // Mono
-    monoSub.subscribe(it, "/camera/image_raw",  1);
-    infoSub.subscribe(nodeHandler, "/camera/camera_info",  1);
-    syncMono.reset(new SyncMono(SyncMono(3), monoSub, infoSub) );
-    syncMono->registerCallback(bind(&Tracking::GrabMono, this, _1, _2));
+    mMonoSub.subscribe(it, "/camera/image_raw",  1);
+    mInfoSub.subscribe(nodeHandler, "/camera/camera_info",  1);
+    mSyncMono.reset(new mPoliceSyncMono(mPoliceSyncMono(3), mMonoSub, mInfoSub) );
+    mSyncMono->registerCallback(bind(&Tracking::GrabMono, this, _1, _2));
 
     // Stereo
-    leftSub     .subscribe(it, "/camera/left/image_raw",  1);
-    rightSub    .subscribe(it, "/camera/right/image_raw", 1);
-    leftInfoSub .subscribe(nodeHandler, "/camera/left/camera_info",  1);
-    rightInfoSub.subscribe(nodeHandler, "/camera/right/camera_info", 1);
-    syncStereo.reset(new SyncStereo(SyncStereo(3), leftSub, rightSub, leftInfoSub, rightInfoSub) );
-    syncStereo->registerCallback(bind(&Tracking::GrabStereo, this, _1, _2, _3, _4));
+    mLeftSub     .subscribe(it, "/camera/left/image_raw",  1);
+    mRightSub    .subscribe(it, "/camera/right/image_raw", 1);
+    mLeftInfoSub .subscribe(nodeHandler, "/camera/left/camera_info",  1);
+    mRightInfoSub.subscribe(nodeHandler, "/camera/right/camera_info", 1);
+    mCloudSub    .subscribe(nodeHandler, "/camera/points2", 5);
+    mSyncStereo.reset(new mPoliceSyncStereo(mPoliceSyncStereo(5), mLeftSub, mRightSub, mLeftInfoSub, mRightInfoSub, mCloudSub) );
+    mSyncStereo->registerCallback(bind(&Tracking::GrabStereo, this, _1, _2, _3, _4, _5));
 
     ros::spin();
 }
@@ -189,6 +211,7 @@ void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg,
         ROS_ERROR("Camera set as Stereo, but subscribing to mono images. Please correct your remaps!");
 
     cv::Mat im;
+    ros::Time stamp = msg->header.stamp;
 
     // Copy the ros image message to cv::Mat. Convert to grayscale if it is a color image.
     cv_bridge::CvImageConstPtr cv_ptr;
@@ -223,10 +246,10 @@ void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg,
         image_geometry::PinholeCameraModel pinholeCameraModel;
         pinholeCameraModel.fromCameraInfo(info);
         cv::Mat K = cv::Mat::eye(3,3,CV_32F);
-        K.at<float>(0,0) = pinholeCameraModel.fx();
-        K.at<float>(1,1) = pinholeCameraModel.fy();
-        K.at<float>(0,2) = pinholeCameraModel.cx();
-        K.at<float>(1,2) = pinholeCameraModel.cy();
+        K.at<float>(0,0) = pinholeCameraModel.fx() / pinholeCameraModel.binningX();
+        K.at<float>(1,1) = pinholeCameraModel.fy() / pinholeCameraModel.binningY();
+        K.at<float>(0,2) = pinholeCameraModel.cx() / pinholeCameraModel.binningX();
+        K.at<float>(1,2) = pinholeCameraModel.cy() / pinholeCameraModel.binningY();
         K.copyTo(mK);
         cv::Mat distCoef = cv::Mat::zeros(1,1,CV_32F);
         if (!mRectified)
@@ -237,9 +260,9 @@ void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg,
     }
 
     if(mState==WORKING || mState==LOST)
-        mCurrentFrame = Frame(im,cv_ptr->header.stamp.toSec(),mpORBextractor,mpORBVocabulary,mK,mDistCoef);
+        mCurrentFrame = Frame(im,stamp.toSec(),mpORBextractor,mpORBVocabulary,mK,mDistCoef);
     else
-        mCurrentFrame = Frame(im,cv_ptr->header.stamp.toSec(),mpIniORBextractor,mpORBVocabulary,mK,mDistCoef);
+        mCurrentFrame = Frame(im,stamp.toSec(),mpIniORBextractor,mpORBVocabulary,mK,mDistCoef);
 
     mLastProcessedState=mState;
 
@@ -353,12 +376,14 @@ void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg,
 void Tracking::GrabStereo(const sensor_msgs::ImageConstPtr& left,
                           const sensor_msgs::ImageConstPtr& right,
                           const sensor_msgs::CameraInfoConstPtr& lInfo,
-                          const sensor_msgs::CameraInfoConstPtr& rInfo)
+                          const sensor_msgs::CameraInfoConstPtr& rInfo,
+                          const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
     if (!mStereo)
         ROS_ERROR("Camera set as Mono, but subscribing to stereo images. Please correct your remaps!");
 
     cv::Mat lIm, rIm;
+    ros::Time stamp = left->header.stamp;
 
     // Copy the ros image message to cv::Mat. Convert to grayscale if it is a color image.
     cv_bridge::CvImageConstPtr cv_ptr_l, cv_ptr_r;
@@ -407,10 +432,10 @@ void Tracking::GrabStereo(const sensor_msgs::ImageConstPtr& left,
         // Left
         pinholeCameraModel = stereoCameraModel.left();
         cv::Mat K = cv::Mat::eye(3,3,CV_32F);
-        K.at<float>(0,0) = pinholeCameraModel.fx();
-        K.at<float>(1,1) = pinholeCameraModel.fy();
-        K.at<float>(0,2) = pinholeCameraModel.cx();
-        K.at<float>(1,2) = pinholeCameraModel.cy();
+        K.at<float>(0,0) = pinholeCameraModel.fx() / pinholeCameraModel.binningX();
+        K.at<float>(1,1) = pinholeCameraModel.fy() / pinholeCameraModel.binningY();
+        K.at<float>(0,2) = pinholeCameraModel.cx() / pinholeCameraModel.binningX();
+        K.at<float>(1,2) = pinholeCameraModel.cy() / pinholeCameraModel.binningY();
         K.copyTo(mK);
         cv::Mat distCoef = cv::Mat::zeros(1,1,CV_32F);
         if (!mRectified)
@@ -420,10 +445,10 @@ void Tracking::GrabStereo(const sensor_msgs::ImageConstPtr& left,
         // Right
         pinholeCameraModel = stereoCameraModel.right();
         cv::Mat Kr = cv::Mat::eye(3,3,CV_32F);
-        Kr.at<float>(0,0) = pinholeCameraModel.fx();
-        Kr.at<float>(1,1) = pinholeCameraModel.fy();
-        Kr.at<float>(0,2) = pinholeCameraModel.cx();
-        Kr.at<float>(1,2) = pinholeCameraModel.cy();
+        Kr.at<float>(0,0) = pinholeCameraModel.fx() / pinholeCameraModel.binningX();
+        Kr.at<float>(1,1) = pinholeCameraModel.fy() / pinholeCameraModel.binningY();
+        Kr.at<float>(0,2) = pinholeCameraModel.cx() / pinholeCameraModel.binningX();
+        Kr.at<float>(1,2) = pinholeCameraModel.cy() / pinholeCameraModel.binningY();
         Kr.copyTo(mKr);
         cv::Mat distCoefR = cv::Mat::zeros(1,1,CV_32F);
         if (!mRectified)
@@ -436,7 +461,7 @@ void Tracking::GrabStereo(const sensor_msgs::ImageConstPtr& left,
     mLastProcessedState=mState;
 
     // The current frame is
-    mCurrentFrame = Frame(lIm,rIm,cv_ptr_l->header.stamp.toSec(),mpORBextractor,mpORBVocabulary,mK,mDistCoef,mKr,mDistCoefR,mBaseline);
+    mCurrentFrame = Frame(lIm,rIm,stamp.toSec(),mpORBextractor,mpORBVocabulary,mK,mDistCoef,mKr,mDistCoefR,mBaseline);
 
     if(mState==NOT_INITIALIZED)
     {
@@ -488,7 +513,15 @@ void Tracking::GrabStereo(const sensor_msgs::ImageConstPtr& left,
             mpMapPublisher->SetCurrentCameraPose(mCurrentFrame.mTcw);
 
             if(NeedNewKeyFrame())
+            {
+                // Get the pointcloud
+                PointCloudRGB::Ptr pclCloud(new PointCloudRGB);
+                fromROSMsg(*cloud, *pclCloud);
+                copyPointCloud(*pclCloud, *mCloud);
+
+                // Create a new keyframe
                 CreateNewKeyFrame();
+            }
 
             // We allow points with high innovation (considererd outliers by the Huber Function)
             // pass to the new keyframe, so that bundle adjustment will finally decide
@@ -900,11 +933,16 @@ bool Tracking::NeedNewKeyFrame()
 void Tracking::CreateNewKeyFrame()
 {
     KeyFrame* pKF = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
-
     mpLocalMapper->InsertKeyFrame(pKF);
-
     mnLastKeyFrameId = mCurrentFrame.mnId;
     mpLastKeyFrame = pKF;
+
+    // Save cloud
+    if (mCloud->points.size() > 1000)
+    {
+        string strCloud = ros::package::getPath("orb_slam")+"/"+"clouds/"+boost::lexical_cast<string>(pKF->mnId);
+        pcl::io::savePCDFileBinary(strCloud + ".pcd", *mCloud);
+    }
 }
 
 void Tracking::SearchReferencePointsInFrustum()

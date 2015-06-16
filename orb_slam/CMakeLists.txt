@@ -8,12 +8,14 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   image_geometry
   cv_bridge
+  pcl_ros
   g2o
 )
 
 #LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 #find_package(Cholmod REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(PCL REQUIRED)
 
 catkin_package()
 
@@ -26,6 +28,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
+  ${PCL_INCLUDE_DIRS}
   ${CHOLMOD_INCLUDE_DIR}
   ${PROJECT_SOURCE_DIR}
 )

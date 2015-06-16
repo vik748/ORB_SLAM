@@ -24,12 +24,15 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/image_encodings.h>
 #include <image_transport/subscriber_filter.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <image_geometry/stereo_camera_model.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
 
 #include "FramePublisher.h"
 #include "Map.h"
@@ -44,6 +47,8 @@
 
 #include <tf/transform_broadcaster.h>
 
+typedef pcl::PointXYZRGB                  PointRGB;
+typedef pcl::PointCloud<PointRGB>         PointCloudRGB;
 
 namespace ORB_SLAM
 {
@@ -100,7 +105,8 @@ protected:
     void GrabStereo(const sensor_msgs::ImageConstPtr& left,
                     const sensor_msgs::ImageConstPtr& right,
                     const sensor_msgs::CameraInfoConstPtr& lInfo,
-                    const sensor_msgs::CameraInfoConstPtr& rInfo);
+                    const sensor_msgs::CameraInfoConstPtr& rInfo,
+                    const sensor_msgs::PointCloud2ConstPtr& cloud);
 
     void FirstInitialization();
     void Initialize();
@@ -145,6 +151,9 @@ protected:
 
     // False = images are not rectified, True = images rectified
     bool mRectified;
+
+    // Pointcloud for the stereo version
+    PointCloudRGB::Ptr mCloud;
 
     //Local Map
     KeyFrame* mpReferenceKF;
@@ -199,20 +208,22 @@ protected:
     tf::TransformBroadcaster mTfBr;
 
     // Image sync
-    image_transport::SubscriberFilter monoSub, leftSub, rightSub;
-    message_filters::Subscriber<sensor_msgs::CameraInfo> infoSub, leftInfoSub, rightInfoSub;
+    image_transport::SubscriberFilter mMonoSub, mLeftSub, mRightSub;
+    message_filters::Subscriber<sensor_msgs::CameraInfo> mInfoSub, mLeftInfoSub, mRightInfoSub;
+    message_filters::Subscriber<sensor_msgs::PointCloud2> mCloudSub;
 
     typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
-                                                      sensor_msgs::CameraInfo> PolicyMono;
-    typedef message_filters::Synchronizer<PolicyMono> SyncMono;
-    boost::shared_ptr<SyncMono> syncMono;
+                                                      sensor_msgs::CameraInfo> policyMono;
+    typedef message_filters::Synchronizer<policyMono> mPoliceSyncMono;
+    boost::shared_ptr<mPoliceSyncMono> mSyncMono;
 
     typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
                                                       sensor_msgs::Image,
                                                       sensor_msgs::CameraInfo,
-                                                      sensor_msgs::CameraInfo> PolicyStereo;
-    typedef message_filters::Synchronizer<PolicyStereo> SyncStereo;
-    boost::shared_ptr<SyncStereo> syncStereo;
+                                                      sensor_msgs::CameraInfo,
+                                                      sensor_msgs::PointCloud2> policyStereo;
+    typedef message_filters::Synchronizer<policyStereo> mPoliceSyncStereo;
+    boost::shared_ptr<mPoliceSyncStereo> mSyncStereo;
 };
 
 } //namespace ORB_SLAM

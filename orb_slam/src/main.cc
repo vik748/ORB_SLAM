@@ -159,8 +159,8 @@ int main(int argc, char **argv)
         cv::Mat R = pKF->GetRotation().t();
         vector<float> q = ORB_SLAM::Converter::toQuaternion(R);
         cv::Mat t = pKF->GetCameraCenter();
-        f << setprecision(6) << pKF->mTimeStamp << setprecision(7) << " " << t.at<float>(0) << " " << t.at<float>(1) << " " << t.at<float>(2)
-          << " " << q[0] << " " << q[1] << " " << q[2] << " " << q[3] << endl;
+        f << setprecision(6) << pKF->mTimeStamp << "," << pKF->mnId << setprecision(7) << "," << t.at<float>(0) << "," << t.at<float>(1) << "," << t.at<float>(2)
+          << "," << q[0] << "," << q[1] << "," << q[2] << "," << q[3] << endl;
 
     }
     f.close();
