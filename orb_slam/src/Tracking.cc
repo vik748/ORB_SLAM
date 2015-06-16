@@ -72,15 +72,31 @@ Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPubl
     else
         cout << "- color order: BGR (ignored if grayscale)" << endl;
 
-    // Is stereo?
-    mStereo = fSettings["Camera.Stereo"];
-    if (mStereo != 0 && mStereo != 1)
-        mStereo = 0;
-
-    if(mStereo == 0)
-        cout << "- camera: MONO" << endl;
+    // Are the images rectified?
+    int rectified = fSettings["Camera.Stereo"];
+    if (rectified != 0 )
+    {
+        mRectified = true;
+        cout << "- Images are rectified: Yes" << endl;
+    }
     else
+    {
+        mRectified = false;
+        cout << "- Images are rectified: No" << endl;
+    }
+
+    // Is stereo?
+    int stereo = fSettings["Camera.Stereo"];
+    if (stereo != 0 )
+    {
+        mStereo = true;
         cout << "- camera: STEREO" << endl;
+    }
+    else
+    {
+        mStereo = false;
+        cout << "- camera: MONO" << endl;
+    }
 
     // Load ORB parameters
     int nFeatures = fSettings["ORBextractor.nFeatures"];
@@ -128,7 +144,7 @@ Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPubl
 void Tracking::SetLocalMapper(LocalMapping *pLocalMapper)
 {
     mpLocalMapper=pLocalMapper;
-    mpLocalMapper->setStereo((bool)mStereo);
+    mpLocalMapper->setStereo(mStereo);
 }
 
 void Tracking::SetLoopClosing(LoopClosing *pLoopClosing)
@@ -169,6 +185,9 @@ void Tracking::Run()
 void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg,
                         const sensor_msgs::CameraInfoConstPtr& info)
 {
+    if (mStereo)
+        ROS_ERROR("Camera set as Stereo, but subscribing to mono images. Please correct your remaps!");
+
     cv::Mat im;
 
     // Copy the ros image message to cv::Mat. Convert to grayscale if it is a color image.
@@ -197,13 +216,7 @@ void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg,
         cv_ptr->image.copyTo(im);
     }
 
-    if(mState==WORKING || mState==LOST)
-        mCurrentFrame = Frame(im,cv_ptr->header.stamp.toSec(),mpORBextractor,mpORBVocabulary,mK,mDistCoef);
-    else
-        mCurrentFrame = Frame(im,cv_ptr->header.stamp.toSec(),mpIniORBextractor,mpORBVocabulary,mK,mDistCoef);
-
     // Depending on the state of the Tracker we perform different tasks
-
     if(mState==NO_IMAGES_YET)
     {
         // Read the camera parameters from CameraInfo message
@@ -215,11 +228,18 @@ void Tracking::GrabMono(const sensor_msgs::ImageConstPtr& msg,
         K.at<float>(0,2) = pinholeCameraModel.cx();
         K.at<float>(1,2) = pinholeCameraModel.cy();
         K.copyTo(mK);
-        cv::Mat distCoef(pinholeCameraModel.distortionCoeffs().colRange(0,4).t());
+        cv::Mat distCoef = cv::Mat::zeros(1,1,CV_32F);
+        if (!mRectified)
+            distCoef = pinholeCameraModel.distortionCoeffs().t();
         distCoef.copyTo(mDistCoef);
 
         mState = NOT_INITIALIZED;
     }
+
+    if(mState==WORKING || mState==LOST)
+        mCurrentFrame = Frame(im,cv_ptr->header.stamp.toSec(),mpORBextractor,mpORBVocabulary,mK,mDistCoef);
+    else
+        mCurrentFrame = Frame(im,cv_ptr->header.stamp.toSec(),mpIniORBextractor,mpORBVocabulary,mK,mDistCoef);
 
     mLastProcessedState=mState;
 
@@ -335,6 +355,9 @@ void Tracking::GrabStereo(const sensor_msgs::ImageConstPtr& left,
                           const sensor_msgs::CameraInfoConstPtr& lInfo,
                           const sensor_msgs::CameraInfoConstPtr& rInfo)
 {
+    if (!mStereo)
+        ROS_ERROR("Camera set as Mono, but subscribing to stereo images. Please correct your remaps!");
+
     cv::Mat lIm, rIm;
 
     // Copy the ros image message to cv::Mat. Convert to grayscale if it is a color image.
@@ -389,8 +412,9 @@ void Tracking::GrabStereo(const sensor_msgs::ImageConstPtr& left,
         K.at<float>(0,2) = pinholeCameraModel.cx();
         K.at<float>(1,2) = pinholeCameraModel.cy();
         K.copyTo(mK);
-        cv::Mat distCoef = cv::Mat::zeros(4,1,CV_32F);
-        //cv::Mat distCoef(pinholeCameraModel.distortionCoeffs().colRange(0,4).t());
+        cv::Mat distCoef = cv::Mat::zeros(1,1,CV_32F);
+        if (!mRectified)
+            cv::Mat distCoef(pinholeCameraModel.distortionCoeffs().colRange(0,4).t());
         distCoef.copyTo(mDistCoef);
 
         // Right
@@ -401,8 +425,9 @@ void Tracking::GrabStereo(const sensor_msgs::ImageConstPtr& left,
         Kr.at<float>(0,2) = pinholeCameraModel.cx();
         Kr.at<float>(1,2) = pinholeCameraModel.cy();
         Kr.copyTo(mKr);
-        //cv::Mat distCoefR(pinholeCameraModel.distortionCoeffs().colRange(0,4).t());
-        cv::Mat distCoefR = cv::Mat::zeros(4,1,CV_32F);
+        cv::Mat distCoefR = cv::Mat::zeros(1,1,CV_32F);
+        if (!mRectified)
+            cv::Mat distCoefR(pinholeCameraModel.distortionCoeffs().colRange(0,4).t());
         distCoefR.copyTo(mDistCoefR);
 
         mState = NOT_INITIALIZED;

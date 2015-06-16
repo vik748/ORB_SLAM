@@ -140,8 +140,11 @@ protected:
     // Initalization
     Initializer* mpInitializer;
 
-    // 0 = mono, 1 = stereo
-    int mStereo;
+    // False = mono, True = stereo
+    bool mStereo;
+
+    // False = images are not rectified, True = images rectified
+    bool mRectified;
 
     //Local Map
     KeyFrame* mpReferenceKF;

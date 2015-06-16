@@ -8,6 +8,9 @@ Camera.fps: 30.0
 # Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
 Camera.RGB: 1
 
+# Are the images already rectified? 0=no rectified, 1=rectified
+Camera.Rectified: 0
+
 # Select mono or stereo version: 0=Mono, 1=Stereo
 Camera.Stereo: 0
 

@@ -69,7 +69,6 @@ Frame::Frame(cv::Mat &im_, const double &timeStamp, ORBextractor* extractor, ORB
 
     UndistortKeyPoints(mvKeys, mvKeysUn);
 
-
     // This is done for the first created Frame
     if(mbInitialComputations)
     {
@@ -85,7 +84,6 @@ Frame::Frame(cv::Mat &im_, const double &timeStamp, ORBextractor* extractor, ORB
 
         mbInitialComputations=false;
     }
-
 
     mnId=nNextId++;
 
@@ -112,7 +110,6 @@ Frame::Frame(cv::Mat &im_, const double &timeStamp, ORBextractor* extractor, ORB
     for(unsigned int i=0; i<FRAME_GRID_COLS;i++)
         for (unsigned int j=0; j<FRAME_GRID_ROWS;j++)
             mGrid[i][j].reserve(nReserve);
-
 
     for(size_t i=0;i<mvKeysUn.size();i++)
     {
