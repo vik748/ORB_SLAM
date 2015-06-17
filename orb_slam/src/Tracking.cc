@@ -55,7 +55,7 @@ namespace ORB_SLAM
 
 
 Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPublisher *pMapPublisher, Map *pMap, string strSettingPath):
-    mState(NO_IMAGES_YET), mpORBVocabulary(pVoc), mCloud(new PointCloudRGB), mpFramePublisher(pFramePublisher), mpMapPublisher(pMapPublisher), mpMap(pMap),
+    mState(NO_IMAGES_YET), mpORBVocabulary(pVoc), mCloud(new PointCloudRGB), mSaveN(0), mpFramePublisher(pFramePublisher), mpMapPublisher(pMapPublisher), mpMap(pMap),
     mnLastRelocFrameId(0), mbPublisherStopped(false), mbReseting(false), mbForceRelocalisation(false), mbMotionModel(false)
 {
     // Load camera parameters from settings file
@@ -938,11 +938,14 @@ void Tracking::CreateNewKeyFrame()
     mpLastKeyFrame = pKF;
 
     // Save cloud
-    if (mCloud->points.size() > 1000)
+    mSaveN++;
+    if (mCloud->points.size() > 1000 && mSaveN == 5)
     {
         string strCloud = ros::package::getPath("orb_slam")+"/"+"clouds/"+boost::lexical_cast<string>(pKF->mnId);
         pcl::io::savePCDFileBinary(strCloud + ".pcd", *mCloud);
     }
+    if (mSaveN == 5)
+        mSaveN = 0;
 }
 
 void Tracking::SearchReferencePointsInFrustum()

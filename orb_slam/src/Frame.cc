@@ -170,7 +170,7 @@ Frame::Frame(cv::Mat &lIm_, cv::Mat &rIm_, const double &timeStamp, ORBextractor
 
     // Left/right matching
     std::vector<cv::DMatch> matches, matchesFiltered;
-    ORBmatcher::RatioMatching(mDescriptorsLeft, mDescriptorsRight, 0.99, matches);
+    ORBmatcher::RatioMatching(mDescriptorsLeft, mDescriptorsRight, 0.9, matches);
 
     if (matches.empty())
         return;

@@ -155,6 +155,9 @@ protected:
     // Pointcloud for the stereo version
     PointCloudRGB::Ptr mCloud;
 
+    // To save memory, we do not store all the pointclouds
+    int mSaveN;
+
     //Local Map
     KeyFrame* mpReferenceKF;
     std::vector<KeyFrame*> mvpLocalKeyFrames;
