@@ -3,16 +3,13 @@
 # Camera Parameters. Adjust them!
 
 # Camera frames per second
-Camera.fps: 30.0
+Camera.fps: 7.0
 
 # Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
 Camera.RGB: 1
 
 # Are the images already rectified? 0=no rectified, 1=rectified
-Camera.Rectified: 0
-
-# Select mono or stereo version: 0=Mono, 1=Stereo
-Camera.Stereo: 0
+Camera.Rectified: 1
 
 #--------------------------------------------------------------------------------------------
 ### Changing the parameters below could seriously degradate the performance of the system

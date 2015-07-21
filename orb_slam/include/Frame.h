@@ -46,17 +46,12 @@ public:
     Frame();
     Frame(const Frame &frame);
     Frame(cv::Mat &im, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef);
-    Frame(cv::Mat &lIm, cv::Mat &rIm, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, cv::Mat &Kr, cv::Mat &distCoefR, float baseline);
 
     ORBVocabulary* mpORBvocabulary;
     ORBextractor* mpORBextractor;
 
     // Mono image
     cv::Mat im;
-
-    // Stereo images
-    cv::Mat lIm;
-    cv::Mat rIm;
 
     // Frame timestamp
     double mTimeStamp;
@@ -68,15 +63,6 @@ public:
     static float cx;
     static float cy;
     cv::Mat mDistCoef;
-
-    // Same for stereo version
-    cv::Mat mKr;
-    static float fxR;
-    static float fyR;
-    static float cxR;
-    static float cyR;
-    cv::Mat mDistCoefR;
-    float mBaseline;
 
     // Number of KeyPoints
     int N;
@@ -91,9 +77,6 @@ public:
 
     // ORB descriptor, each row associated to a keypoint
     cv::Mat mDescriptors;
-
-    // 3D world points for the stereo verions
-    std::vector<cv::Point3f> mPoints3d;
 
     // MapPoints associated to keypoints, NULL pointer if not association
     std::vector<MapPoint*> mvpMapPoints;

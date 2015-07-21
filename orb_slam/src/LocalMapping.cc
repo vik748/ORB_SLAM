@@ -29,7 +29,7 @@ namespace ORB_SLAM
 {
 
 LocalMapping::LocalMapping(Map *pMap):
-    mbResetRequested(false), mpMap(pMap), mStereo(false), mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbAcceptKeyFrames(true)
+    mbResetRequested(false), mpMap(pMap), mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbAcceptKeyFrames(true)
 {
 }
 
@@ -62,10 +62,7 @@ void LocalMapping::Run()
             MapPointCulling();
 
             // Triangulate new MapPoints
-            if (!mStereo)
-                CreateNewMapPointsMono();
-            else
-                CreateNewMapPointsStereo();
+            CreateNewMapPointsMono();
 
             // Find more matches in neighbor keyframes and fuse point duplications
             SearchInNeighbors();
@@ -373,118 +370,6 @@ void LocalMapping::CreateNewMapPointsMono()
     }
 }
 
-void LocalMapping::CreateNewMapPointsStereo()
-{
-    // Take neighbor keyframes in covisibility graph
-    vector<KeyFrame*> vpNeighKFs = mpCurrentKeyFrame->GetBestCovisibilityKeyFrames(20);
-
-    ORBmatcher matcher(0.6,false);
-
-    cv::Mat Rcw1 = mpCurrentKeyFrame->GetRotation();
-    cv::Mat Rwc1 = Rcw1.t();
-    cv::Mat tcw1 = mpCurrentKeyFrame->GetTranslation();
-    cv::Mat Tcw1(3,4,CV_32F);
-    Rcw1.copyTo(Tcw1.colRange(0,3));
-    tcw1.copyTo(Tcw1.col(3));
-    cv::Mat Ow1 = mpCurrentKeyFrame->GetCameraCenter();
-
-    cv::Mat Twc1 = cv::Mat::eye(4,4,CV_32F);
-    Tcw1.copyTo(Twc1.rowRange(0,3));
-    Twc1 = Twc1.inv();
-    cv::Mat twc1(Twc1.col(3).rowRange(0,3));
-
-
-    const float fx1 = mpCurrentKeyFrame->fx;
-    const float fy1 = mpCurrentKeyFrame->fy;
-    const float cx1 = mpCurrentKeyFrame->cx;
-    const float cy1 = mpCurrentKeyFrame->cy;
-    const float invfx1 = 1.0f/fx1;
-    const float invfy1 = 1.0f/fy1;
-
-    // The 3d points of the current keyframe
-    std::vector<cv::Point3f> points3d1 = mpCurrentKeyFrame->Get3dPoints();
-
-    // Search matches with epipolar restriction and triangulate
-    for(size_t i=0; i<vpNeighKFs.size(); i++)
-    {
-        KeyFrame* pKF2 = vpNeighKFs[i];
-
-        // Check first that baseline is not too short
-        // Small translation errors for short baseline keyframes make scale to diverge
-        cv::Mat Ow2 = pKF2->GetCameraCenter();
-        cv::Mat vBaseline = Ow2-Ow1;
-        const float baseline = cv::norm(vBaseline);
-        const float medianDepthKF2 = pKF2->ComputeSceneMedianDepth(2);
-        const float ratioBaselineDepth = baseline/medianDepthKF2;
-
-        if(ratioBaselineDepth<0.01)
-            continue;
-
-        // Compute Fundamental Matrix
-        cv::Mat F12 = ComputeF12(mpCurrentKeyFrame,pKF2);
-
-        // Search matches that fulfil epipolar constraint
-        vector<cv::KeyPoint> vMatchedKeysUn1;
-        vector<cv::KeyPoint> vMatchedKeysUn2;
-        vector<pair<size_t,size_t> > vMatchedIndices;
-        matcher.SearchForTriangulation(mpCurrentKeyFrame,pKF2,F12,vMatchedKeysUn1,vMatchedKeysUn2,vMatchedIndices);
-        std::vector<cv::Point3f> points3d2 = pKF2->Get3dPoints();
-
-        cv::Mat Rcw2 = pKF2->GetRotation();
-        cv::Mat Rwc2 = Rcw2.t();
-        cv::Mat tcw2 = pKF2->GetTranslation();
-        cv::Mat Tcw2(3,4,CV_32F);
-        Rcw2.copyTo(Tcw2.colRange(0,3));
-        tcw2.copyTo(Tcw2.col(3));
-
-        const float fx2 = pKF2->fx;
-        const float fy2 = pKF2->fy;
-        const float cx2 = pKF2->cx;
-        const float cy2 = pKF2->cy;
-        const float invfx2 = 1.0f/fx2;
-        const float invfy2 = 1.0f/fy2;
-
-        // Triangulate each match
-        for(size_t ikp=0, iendkp=vMatchedKeysUn1.size(); ikp<iendkp; ikp++)
-        {
-            const int idx1 = vMatchedIndices[ikp].first;
-            const int idx2 = vMatchedIndices[ikp].second;
-
-            const cv::KeyPoint &kp1 = vMatchedKeysUn1[ikp];
-            const cv::KeyPoint &kp2 = vMatchedKeysUn2[ikp];
-
-            // Check parallax between rays
-            cv::Mat xn1 = (cv::Mat_<float>(3,1) << (kp1.pt.x-cx1)*invfx1, (kp1.pt.y-cy1)*invfy1, 1.0 );
-            cv::Mat ray1 = Rwc1*xn1;
-            cv::Mat xn2 = (cv::Mat_<float>(3,1) << (kp2.pt.x-cx2)*invfx2, (kp2.pt.y-cy2)*invfy2, 1.0 );
-            cv::Mat ray2 = Rwc2*xn2;
-            const float cosParallaxRays = ray1.dot(ray2)/(cv::norm(ray1)*cv::norm(ray2));
-
-            if(cosParallaxRays<0 || cosParallaxRays>0.9998)
-                continue;
-
-            cv::Mat x3Dc(points3d1[idx1]);
-            cv::Mat x3D = Rwc1*x3Dc+twc1;
-
-            // Triangulation is succesfull
-            MapPoint* pMP = new MapPoint(x3D,mpCurrentKeyFrame,mpMap);
-
-            pMP->AddObservation(pKF2,idx2);
-            pMP->AddObservation(mpCurrentKeyFrame,idx1);
-
-            mpCurrentKeyFrame->AddMapPoint(pMP,idx1);
-            pKF2->AddMapPoint(pMP,idx2);
-
-            pMP->ComputeDistinctiveDescriptors();
-
-            pMP->UpdateNormalAndDepth();
-
-            mpMap->AddMapPoint(pMP);
-            mlpRecentAddedMapPoints.push_back(pMP);
-        }
-    }
-}
-
 void LocalMapping::SearchInNeighbors()
 {
     // Retrieve neighbor keyframes
@@ -595,11 +480,6 @@ void LocalMapping::Stop()
 {
     boost::mutex::scoped_lock lock(mMutexStop);
     mbStopped = true;
-}
-
-void LocalMapping::setStereo(bool stereo)
-{
-    mStereo = stereo;
 }
 
 bool LocalMapping::isStopped()

@@ -24,15 +24,13 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <sensor_msgs/Image.h>
-#include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/Range.h>
 #include <image_transport/subscriber_filter.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <message_filters/sync_policies/exact_time.h>
-#include <image_geometry/stereo_camera_model.h>
-#include <pcl_ros/point_cloud.h>
-#include <pcl/point_types.h>
+#include <message_filters/sync_policies/approximate_time.h>
 
 #include "FramePublisher.h"
 #include "Map.h"
@@ -46,9 +44,6 @@
 #include "MapPublisher.h"
 
 #include <tf/transform_broadcaster.h>
-
-typedef pcl::PointXYZRGB                  PointRGB;
-typedef pcl::PointCloud<PointRGB>         PointCloudRGB;
 
 namespace ORB_SLAM
 {
@@ -99,14 +94,11 @@ public:
 
 
 protected:
-    void GrabMono(const sensor_msgs::ImageConstPtr& msg,
-                  const sensor_msgs::CameraInfoConstPtr& info);
+    void GrabImages(const sensor_msgs::ImageConstPtr& msg,
+                    const sensor_msgs::CameraInfoConstPtr& info);
 
-    void GrabStereo(const sensor_msgs::ImageConstPtr& left,
-                    const sensor_msgs::ImageConstPtr& right,
-                    const sensor_msgs::CameraInfoConstPtr& lInfo,
-                    const sensor_msgs::CameraInfoConstPtr& rInfo,
-                    const sensor_msgs::PointCloud2ConstPtr& cloud);
+    void GrabRange(const sensor_msgs::ImageConstPtr& msg,
+                   const sensor_msgs::RangeConstPtr& range);
 
     void FirstInitialization();
     void Initialize();
@@ -146,17 +138,8 @@ protected:
     // Initalization
     Initializer* mpInitializer;
 
-    // False = mono, True = stereo
-    bool mStereo;
-
     // False = images are not rectified, True = images rectified
     bool mRectified;
-
-    // Pointcloud for the stereo version
-    PointCloudRGB::Ptr mCloud;
-
-    // To save memory, we do not store all the pointclouds
-    int mSaveN;
 
     //Local Map
     KeyFrame* mpReferenceKF;
@@ -171,9 +154,8 @@ protected:
     Map* mpMap;
 
     //Camera information
-    cv::Mat mK, mKr;
-    cv::Mat mDistCoef, mDistCoefR;
-    float mBaseline;
+    cv::Mat mK;
+    cv::Mat mDistCoef;
 
     //New KeyFrame rules (according to fps)
     int mMinFrames;
@@ -189,8 +171,8 @@ protected:
     unsigned int mnLastRelocFrameId;
 
     //Mutex
-    boost::mutex mMutexTrack;
     boost::mutex mMutexForceRelocalisation;
+    boost::mutex mMutexRange;
 
     //Reset
     bool mbPublisherStopped;
@@ -210,23 +192,24 @@ protected:
     // Transfor broadcaster (for visualization in rviz)
     tf::TransformBroadcaster mTfBr;
 
+    // Range
+    float mRange;
+    double mRangeStamp;
+
     // Image sync
-    image_transport::SubscriberFilter mMonoSub, mLeftSub, mRightSub;
-    message_filters::Subscriber<sensor_msgs::CameraInfo> mInfoSub, mLeftInfoSub, mRightInfoSub;
-    message_filters::Subscriber<sensor_msgs::PointCloud2> mCloudSub;
+    image_transport::SubscriberFilter mImageSub, mImageSub2;
+    message_filters::Subscriber<sensor_msgs::CameraInfo> mInfoSub;
+    message_filters::Subscriber<sensor_msgs::Range> mRangeSub;
 
     typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
-                                                      sensor_msgs::CameraInfo> policyMono;
-    typedef message_filters::Synchronizer<policyMono> mPoliceSyncMono;
-    boost::shared_ptr<mPoliceSyncMono> mSyncMono;
+                                                      sensor_msgs::CameraInfo> policyImages;
+    typedef message_filters::Synchronizer<policyImages> mPoliceSyncImages;
+    boost::shared_ptr<mPoliceSyncImages> mSyncImages;
 
-    typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image,
-                                                      sensor_msgs::Image,
-                                                      sensor_msgs::CameraInfo,
-                                                      sensor_msgs::CameraInfo,
-                                                      sensor_msgs::PointCloud2> policyStereo;
-    typedef message_filters::Synchronizer<policyStereo> mPoliceSyncStereo;
-    boost::shared_ptr<mPoliceSyncStereo> mSyncStereo;
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
+                                                            sensor_msgs::Range> policyRange;
+    typedef message_filters::Synchronizer<policyRange> mPoliceSyncRange;
+    boost::shared_ptr<mPoliceSyncRange> mSyncRange;
 };
 
 } //namespace ORB_SLAM

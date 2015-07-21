@@ -26,7 +26,7 @@ namespace ORB_SLAM
 {
 
 
-MapPublisher::MapPublisher(Map* pMap):mpMap(pMap), mbCameraUpdated(false)
+MapPublisher::MapPublisher(Map* pMap):mpMap(pMap), mbCameraUpdated(false), mLastPose(-1.0), mLastRange(-1.0), mLastStamp(-1.0), mRangeScale(-1.0)
 {
     const char* MAP_FRAME_ID = "/ORB_SLAM/World";
     const char* POINTS_NAMESPACE = "MapPoints";
@@ -107,13 +107,14 @@ MapPublisher::MapPublisher(Map* pMap):mpMap(pMap), mbCameraUpdated(false)
     mReferencePoints.color.a = 1.0;
 
     //Configure Publisher
-    publisher = nh.advertise<visualization_msgs::Marker>("ORB_SLAM/Map", 10);
+    mMapPublisher = nh.advertise<visualization_msgs::Marker>("ORB_SLAM/Map", 10);
+    mPosePublisher = nh.advertise<geometry_msgs::PoseStamped>("ORB_SLAM/Pose", 10);
 
-    publisher.publish(mPoints);
-    publisher.publish(mReferencePoints);
-    publisher.publish(mCovisibilityGraph);
-    publisher.publish(mKeyFrames);
-    publisher.publish(mCurrentCamera);
+    mMapPublisher.publish(mPoints);
+    mMapPublisher.publish(mReferencePoints);
+    mMapPublisher.publish(mCovisibilityGraph);
+    mMapPublisher.publish(mKeyFrames);
+    mMapPublisher.publish(mCurrentCamera);
 }
 
 void MapPublisher::Refresh()
@@ -172,8 +173,8 @@ void MapPublisher::PublishMapPoints(const vector<MapPoint*> &vpMPs, const vector
 
     mPoints.header.stamp = ros::Time::now();
     mReferencePoints.header.stamp = ros::Time::now();
-    publisher.publish(mPoints);
-    publisher.publish(mReferencePoints);
+    mMapPublisher.publish(mPoints);
+    mMapPublisher.publish(mReferencePoints);
 }
 
 void MapPublisher::PublishKeyFrames(const vector<KeyFrame*> &vpKFs)
@@ -284,9 +285,9 @@ void MapPublisher::PublishKeyFrames(const vector<KeyFrame*> &vpKFs)
     mCovisibilityGraph.header.stamp = ros::Time::now();
     mMST.header.stamp = ros::Time::now();
 
-    publisher.publish(mKeyFrames);
-    publisher.publish(mCovisibilityGraph);
-    publisher.publish(mMST);
+    mMapPublisher.publish(mKeyFrames);
+    mMapPublisher.publish(mCovisibilityGraph);
+    mMapPublisher.publish(mMST);
 }
 
 void MapPublisher::PublishCurrentCamera(const cv::Mat &Tcw)
@@ -309,7 +310,7 @@ void MapPublisher::PublishCurrentCamera(const cv::Mat &Tcw)
     cv::Mat p3w = Twc*p3;
     cv::Mat p4w = Twc*p4;
 
-    geometry_msgs::Point msgs_o,msgs_p1, msgs_p2, msgs_p3, msgs_p4;
+    geometry_msgs::Point msgs_o, msgs_p1, msgs_p2, msgs_p3, msgs_p4;
     msgs_o.x=ow.at<float>(0);
     msgs_o.y=ow.at<float>(1);
     msgs_o.z=ow.at<float>(2);
@@ -344,15 +345,91 @@ void MapPublisher::PublishCurrentCamera(const cv::Mat &Tcw)
     mCurrentCamera.points.push_back(msgs_p1);
 
     mCurrentCamera.header.stamp = ros::Time::now();
+    mMapPublisher.publish(mCurrentCamera);
 
-    publisher.publish(mCurrentCamera);
+    // Pose publisher
+    if (mRangeScale > 0 && mPosePublisher.getNumSubscribers() > 0)
+    {
+        geometry_msgs::PoseStamped pose;
+        cv::Mat Rwc = (Twc.rowRange(0,3).colRange(0,3)).t();
+        vector<float> q = ORB_SLAM::Converter::toQuaternion(Rwc);
+        geometry_msgs::Quaternion msg_q;
+        msg_q.x = q[0];
+        msg_q.y = q[1];
+        msg_q.z = q[2];
+        msg_q.w = q[3];
+
+        msgs_o.x = msgs_o.x * mRangeScale;
+        msgs_o.y = msgs_o.y * mRangeScale;
+        msgs_o.z = msgs_o.z * mRangeScale;
+
+        pose.header.stamp = ros::Time::now();
+        pose.header.frame_id = "/ORB_SLAM/World";
+        pose.pose.position = msgs_o;
+        pose.pose.orientation = msg_q;
+        mPosePublisher.publish(pose);
+    }
 }
 
-void MapPublisher::SetCurrentCameraPose(const cv::Mat &Tcw)
+void MapPublisher::SetCurrentCameraPose(const cv::Mat &Tcw, const double &poseStamp, const float &range, const double &rangeStamp)
 {
     boost::mutex::scoped_lock lock(mMutexCamera);
     mCameraPose = Tcw.clone();
     mbCameraUpdated = true;
+
+    // Current camera pose at range axis
+    cv::Mat o = (cv::Mat_<float>(4,1) << 0, 0, 0, 1);
+    cv::Mat Twc = Tcw.inv();
+    cv::Mat ow = Twc*o;
+    float pose = ow.at<float>(2);
+
+    if (mRangeScale > 0)
+        return;
+
+    // Scale computation
+    const double eps = 1e-2;
+    int idx = -1;
+    for (uint i=0; i<mZposes.size(); i++)
+    {
+        if ( fabs(mZposes[i].second - rangeStamp) <  eps)
+        {
+            idx = (int)i;
+            break;
+        }
+    }
+
+    if (idx >= 0)
+    {
+        if (mLastStamp < 0 )
+        {
+            // First iteration
+            mLastPose = mZposes[idx].first;
+            mLastStamp = mZposes[idx].second;
+            mLastRange = range;
+        }
+        else
+        {
+            // Minimum time between scale updates
+            if ( (mZposes[idx].second - mLastStamp) > 2.0)
+            {
+                float poseDiff = fabs(mZposes[idx].first - mLastPose);
+                float rangeDiff = fabs(range - mLastRange);
+
+                // Check enough range difference
+                if (rangeDiff > 0.5)
+                {
+                    // Set scale
+                    mRangeScale = poseDiff / rangeDiff;
+                    ROS_INFO_STREAM("Scale set to: " << mRangeScale);
+                }
+            }
+        }
+
+        mZposes.clear();
+    }
+
+    // Save
+    mZposes.push_back(make_pair(pose, poseStamp));
 }
 
 cv::Mat MapPublisher::GetCurrentCameraPose()

@@ -57,8 +57,6 @@ public:
 
     void Release();
 
-    void setStereo(bool stereo);
-
     bool isStopped();
 
     bool stopRequested();
@@ -73,7 +71,6 @@ protected:
     bool CheckNewKeyFrames();
     void ProcessNewKeyFrame();
     void CreateNewMapPointsMono();
-    void CreateNewMapPointsStereo();
 
     void MapPointCulling();
     void SearchInNeighbors();
@@ -100,8 +97,6 @@ protected:
     std::list<MapPoint*> mlpRecentAddedMapPoints;
 
     boost::mutex mMutexNewKFs;
-
-    bool mStereo;
 
     bool mbAbortBA;
 

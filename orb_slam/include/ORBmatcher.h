@@ -78,10 +78,6 @@ public:
                                std::vector<cv::KeyPoint> &vMatchedKeys1, std::vector<cv::KeyPoint> &vMatchedKeys2,
                                std::vector<pair<size_t, size_t> > &vMatchedPairs);
 
-    // Ratio matching between descriptors
-    // Used to compute the 3D of stereo
-    static void RatioMatching(const cv::Mat& desc1, const cv::Mat& desc2, double th, std::vector<cv::DMatch>& matches);
-
     // Search matches between MapPoints seen in KF1 and KF2 transforming by a Sim3 [s12*R12|t12]
     int SearchBySim3(KeyFrame* pKF1, KeyFrame* pKF2, std::vector<MapPoint *> &vpMatches12, const float &s12, const cv::Mat &R12, const cv::Mat &t12, float th);
 

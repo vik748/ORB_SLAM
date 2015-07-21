@@ -28,7 +28,7 @@ namespace ORB_SLAM
 {
 long unsigned int Frame::nNextId=0;
 bool Frame::mbInitialComputations=true;
-float Frame::cx, Frame::cy, Frame::fx, Frame::fy, Frame::cxR, Frame::cyR, Frame::fxR, Frame::fyR;
+float Frame::cx, Frame::cy, Frame::fx, Frame::fy;
 int Frame::mnMinX, Frame::mnMinY, Frame::mnMaxX, Frame::mnMaxY;
 
 Frame::Frame()
@@ -37,9 +37,8 @@ Frame::Frame()
 //Copy Constructor
 Frame::Frame(const Frame &frame)
     :mpORBvocabulary(frame.mpORBvocabulary), mpORBextractor(frame.mpORBextractor), im(frame.im.clone()), mTimeStamp(frame.mTimeStamp),
-     mK(frame.mK.clone()), mDistCoef(frame.mDistCoef.clone()), mKr(frame.mKr.clone()), mDistCoefR(frame.mDistCoefR.clone()),
-     mBaseline(frame.mBaseline), N(frame.N), mvKeys(frame.mvKeys), mvKeysUn(frame.mvKeysUn),
-     mBowVec(frame.mBowVec), mFeatVec(frame.mFeatVec), mDescriptors(frame.mDescriptors.clone()), mPoints3d(frame.mPoints3d),
+     mK(frame.mK.clone()), mDistCoef(frame.mDistCoef.clone()), N(frame.N), mvKeys(frame.mvKeys), mvKeysUn(frame.mvKeysUn),
+     mBowVec(frame.mBowVec), mFeatVec(frame.mFeatVec), mDescriptors(frame.mDescriptors.clone()),
      mvpMapPoints(frame.mvpMapPoints), mvbOutlier(frame.mvbOutlier),
      mfGridElementWidthInv(frame.mfGridElementWidthInv), mfGridElementHeightInv(frame.mfGridElementHeightInv),mnId(frame.mnId),
      mpReferenceKF(frame.mpReferenceKF), mnScaleLevels(frame.mnScaleLevels), mfScaleFactor(frame.mfScaleFactor),
@@ -110,138 +109,6 @@ Frame::Frame(cv::Mat &im_, const double &timeStamp, ORBextractor* extractor, ORB
     for(unsigned int i=0; i<FRAME_GRID_COLS;i++)
         for (unsigned int j=0; j<FRAME_GRID_ROWS;j++)
             mGrid[i][j].reserve(nReserve);
-
-    for(size_t i=0;i<mvKeysUn.size();i++)
-    {
-        cv::KeyPoint &kp = mvKeysUn[i];
-
-        int nGridPosX, nGridPosY;
-        if(PosInGrid(kp,nGridPosX,nGridPosY))
-            mGrid[nGridPosX][nGridPosY].push_back(i);
-    }
-
-
-    mvbOutlier = vector<bool>(N,false);
-
-}
-
-Frame::Frame(cv::Mat &lIm_, cv::Mat &rIm_, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, cv::Mat &Kr, cv::Mat &distCoefR, float baseline)
-    :mpORBvocabulary(voc),mpORBextractor(extractor), lIm(lIm_), rIm(rIm_), mTimeStamp(timeStamp), mK(K.clone()), mDistCoef(distCoef.clone()), mKr(Kr.clone()), mDistCoefR(distCoefR.clone()), mBaseline(baseline)
-{
-    // For visualization and common purposes
-    lIm.copyTo(im);
-
-    // Exctract ORB
-    std::vector<cv::KeyPoint> mvKeysLeft, mvKeysRight;
-    std::vector<cv::KeyPoint> mvKeysUnLeft, mvKeysUnRight;
-    cv::Mat mDescriptorsLeft, mDescriptorsRight;
-    (*mpORBextractor)(lIm,cv::Mat(),mvKeysLeft,mDescriptorsLeft);
-    (*mpORBextractor)(rIm,cv::Mat(),mvKeysRight,mDescriptorsRight);
-
-    if(mvKeysLeft.empty() || mvKeysRight.empty())
-        return;
-
-    UndistortKeyPoints(mvKeysLeft, mvKeysUnLeft);
-    UndistortKeyPoints(mvKeysRight, mvKeysUnRight);
-
-    // This is done for the first created Frame
-    if(mbInitialComputations)
-    {
-        ComputeImageBounds();
-
-        mfGridElementWidthInv=static_cast<float>(FRAME_GRID_COLS)/static_cast<float>(mnMaxX-mnMinX);
-        mfGridElementHeightInv=static_cast<float>(FRAME_GRID_ROWS)/static_cast<float>(mnMaxY-mnMinY);
-
-        fx = K.at<float>(0,0);
-        fy = K.at<float>(1,1);
-        cx = K.at<float>(0,2);
-        cy = K.at<float>(1,2);
-
-        fxR = Kr.at<float>(0,0);
-        fyR = Kr.at<float>(1,1);
-        cxR = Kr.at<float>(0,2);
-        cyR = Kr.at<float>(1,2);
-
-        mbInitialComputations=false;
-    }
-
-
-    mnId=nNextId++;
-
-    // Left/right matching
-    std::vector<cv::DMatch> matches, matchesFiltered;
-    ORBmatcher::RatioMatching(mDescriptorsLeft, mDescriptorsRight, 0.9, matches);
-
-    if (matches.empty())
-        return;
-
-    // Filter matches by epipolar
-    for (size_t i = 0; i < matches.size(); ++i)
-    {
-        if (abs(mvKeysUnLeft[matches[i].queryIdx].pt.y - mvKeysUnRight[matches[i].trainIdx].pt.y) < 2.5)
-            matchesFiltered.push_back(matches[i]);
-    }
-
-    if (matchesFiltered.empty())
-        return;
-
-    // Compute 3D points
-    mvKeys.clear();
-    mvKeysUn.clear();
-    mPoints3d.clear();
-    mDescriptors.release();
-    for (size_t i=0; i<matchesFiltered.size(); ++i)
-    {
-        cv::Point3d worldPoint;
-        int indexLeft = matchesFiltered[i].queryIdx;
-        int indexRight = matchesFiltered[i].trainIdx;
-
-        cv::Point2d leftP = mvKeysUnLeft[indexLeft].pt;
-        cv::Point2d rightP = mvKeysUnRight[indexRight].pt;
-
-        double disparity = leftP.x - rightP.x;
-        cv::Point3d xyz(leftP.x - cxR, leftP.y - cyR, fxR);
-        double w = (1.0/mBaseline)*disparity + (cxR - cx)/mBaseline;
-        worldPoint = xyz * (1.0/w);
-
-        // Save
-        if ( isfinite(worldPoint.x) && isfinite(worldPoint.y) && isfinite(worldPoint.z) && worldPoint.z > 0)
-        {
-            mvKeys.push_back(mvKeysLeft[indexLeft]);
-            mvKeysUn.push_back(mvKeysUnLeft[indexLeft]);
-            mDescriptors.push_back(mDescriptorsLeft.row(indexLeft));
-            mPoints3d.push_back(worldPoint);
-        }
-    }
-
-    // Reset the map points
-    N = mvKeys.size();
-    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
-
-    //Scale Levels Info
-    mnScaleLevels = mpORBextractor->GetLevels();
-    mfScaleFactor = mpORBextractor->GetScaleFactor();
-
-    mvScaleFactors.resize(mnScaleLevels);
-    mvLevelSigma2.resize(mnScaleLevels);
-    mvScaleFactors[0]=1.0f;
-    mvLevelSigma2[0]=1.0f;
-    for(int i=1; i<mnScaleLevels; i++)
-    {
-        mvScaleFactors[i]=mvScaleFactors[i-1]*mfScaleFactor;
-        mvLevelSigma2[i]=mvScaleFactors[i]*mvScaleFactors[i];
-    }
-
-    mvInvLevelSigma2.resize(mvLevelSigma2.size());
-    for(int i=0; i<mnScaleLevels; i++)
-        mvInvLevelSigma2[i]=1/mvLevelSigma2[i];
-
-    // Assign Features to Grid Cells
-    int nReserve = 0.5*N/(FRAME_GRID_COLS*FRAME_GRID_ROWS);
-    for(unsigned int i=0; i<FRAME_GRID_COLS;i++)
-        for (unsigned int j=0; j<FRAME_GRID_ROWS;j++)
-            mGrid[i][j].reserve(nReserve);
-
 
     for(size_t i=0;i<mvKeysUn.size();i++)
     {

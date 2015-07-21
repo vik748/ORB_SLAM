@@ -61,12 +61,6 @@ void Map::EraseKeyFrame(KeyFrame *pKF)
 {
     boost::mutex::scoped_lock lock(mMutexMap);
     mspKeyFrames.erase(pKF);
-
-    // Remove the cloud associated to this keyframe
-    string strCloud = ros::package::getPath("orb_slam")+"/"+"clouds/"+boost::lexical_cast<string>(pKF->mnId)+".pcd";
-    if ( boost::filesystem::exists(strCloud) )
-        remove(strCloud.c_str());
-
     mbMapUpdated=true;
 }
 

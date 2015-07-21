@@ -1013,27 +1013,6 @@ vector<cv::KeyPoint> &vMatchedKeys1, vector<cv::KeyPoint> &vMatchedKeys2, vector
     return nmatches;
 }
 
-
-void ORBmatcher::RatioMatching(const cv::Mat& desc1,
-                               const cv::Mat& desc2,
-                               double th,
-                               std::vector<cv::DMatch>& matches)
-{
-    cv::Mat matchMask;
-    const int knn = 2;
-    cv::Ptr<cv::DescriptorMatcher> descriptorMatcher;
-    descriptorMatcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
-    std::vector<std::vector<cv::DMatch> > knnMatches;
-    descriptorMatcher->knnMatch(desc1, desc2, knnMatches, knn, matchMask);
-
-    for (unsigned m = 0; m < knnMatches.size(); m++)
-    {
-      if (knnMatches[m].size() < 2) continue;
-      if (knnMatches[m][0].distance <= knnMatches[m][1].distance * th)
-        matches.push_back(knnMatches[m][0]);
-    }
-}
-
 int ORBmatcher::Fuse(KeyFrame *pKF, vector<MapPoint *> &vpMapPoints, float th)
 {
     cv::Mat Rcw = pKF->GetRotation();
