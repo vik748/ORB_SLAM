@@ -383,6 +383,7 @@ void MapPublisher::SetCurrentCameraPose(const cv::Mat &Tcw, const double &poseSt
     cv::Mat ow = Twc*o;
     float pose = ow.at<float>(2);
 
+    // Compute scale only once
     if (mRangeScale > 0)
         return;
 
@@ -416,11 +417,16 @@ void MapPublisher::SetCurrentCameraPose(const cv::Mat &Tcw, const double &poseSt
                 float rangeDiff = fabs(range - mLastRange);
 
                 // Check enough range difference
-                if (rangeDiff > 0.5)
+                if (rangeDiff > 0.2)
                 {
                     // Set scale
-                    mRangeScale = poseDiff / rangeDiff;
+                    mRangeScale = rangeDiff / poseDiff;
                     ROS_INFO_STREAM("Scale set to: " << mRangeScale);
+
+                    // Save
+                    mLastPose = mZposes[idx].first;
+                    mLastStamp = mZposes[idx].second;
+                    mLastRange = range;
                 }
             }
         }
