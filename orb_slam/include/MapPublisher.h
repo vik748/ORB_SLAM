@@ -45,6 +45,7 @@ public:
     void PublishKeyFrames(const std::vector<KeyFrame*> &vpKFs);
     void PublishCurrentCamera(const cv::Mat &Tcw);
     void SetCurrentCameraPose(const cv::Mat &Tcw, const double &poseStamp, const float &range, const double &rangeStamp);
+    float GetRangeScale();
 
 private:
 

@@ -456,4 +456,9 @@ void MapPublisher::ResetCamFlag()
     mbCameraUpdated = false;
 }
 
+float MapPublisher::GetRangeScale()
+{
+    return mRangeScale;
+}
+
 } //namespace ORB_SLAM
