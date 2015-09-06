@@ -18,13 +18,13 @@
 * along with ORB-SLAM. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <iostream>
-#include <fstream>
-#include <ros/ros.h>
-#include <ros/package.h>
-#include <boost/thread.hpp>
+#include<iostream>
+#include<fstream>
+#include<ros/ros.h>
+#include<ros/package.h>
+#include<boost/thread.hpp>
 
-#include <opencv2/core/core.hpp>
+#include<opencv2/core/core.hpp>
 
 #include "Tracking.h"
 #include "FramePublisher.h"
@@ -74,7 +74,8 @@ int main(int argc, char **argv)
     ORB_SLAM::FramePublisher FramePub;
 
     //Load ORB Vocabulary
-    string strVocFile = ros::package::getPath("orb_slam")+"/"+argv[1];
+   /* Old version to load vocabulary using cv::FileStorage
+    string strVocFile = ros::package::getPath("ORB_SLAM")+"/"+argv[1];
     cout << endl << "Loading ORB Vocabulary. This could take a while." << endl;
     cv::FileStorage fsVoc(strVocFile.c_str(), cv::FileStorage::READ);
     if(!fsVoc.isOpened())
@@ -85,6 +86,24 @@ int main(int argc, char **argv)
     }
     ORB_SLAM::ORBVocabulary Vocabulary;
     Vocabulary.load(fsVoc);
+    */
+    
+    // New version to load vocabulary from text file "Data/ORBvoc.txt". 
+    // If you have an own .yml vocabulary, use the function
+    // saveToTextFile in Thirdparty/DBoW2/DBoW2/TemplatedVocabulary.h
+    string strVocFile = ros::package::getPath("orb_slam")+"/"+argv[1];
+    cout << endl << "Loading ORB Vocabulary. This could take a while." << endl;
+    
+    ORB_SLAM::ORBVocabulary Vocabulary;
+    bool bVocLoad = Vocabulary.loadFromTextFile(strVocFile);
+
+    if(!bVocLoad)
+    {
+        cerr << "Wrong path to vocabulary. Path must be absolut or relative to ORB_SLAM package directory." << endl;
+        cerr << "Falied to open at: " << strVocFile << endl;
+        ros::shutdown();
+        return 1;
+    }
 
     cout << "Vocabulary loaded!" << endl << endl;
 
@@ -109,7 +128,7 @@ int main(int argc, char **argv)
     ORB_SLAM::LocalMapping LocalMapper(&World);
     boost::thread localMappingThread(&ORB_SLAM::LocalMapping::Run,&LocalMapper);
 
-    // //Initialize the Loop Closing Thread and launch
+    //Initialize the Loop Closing Thread and launch
     ORB_SLAM::LoopClosing LoopCloser(&World, &Database, &Vocabulary);
     boost::thread loopClosingThread(&ORB_SLAM::LoopClosing::Run, &LoopCloser);
 
@@ -148,9 +167,6 @@ int main(int argc, char **argv)
     string strFile = ros::package::getPath("orb_slam")+"/"+"KeyFrameTrajectory.txt";
     f.open(strFile.c_str());
     f << fixed;
-    float rangeScale = MapPub.GetRangeScale();
-    if (rangeScale < 0)
-        rangeScale = 1;
 
     for(size_t i=0; i<vpKFs.size(); i++)
     {
@@ -162,8 +178,8 @@ int main(int argc, char **argv)
         cv::Mat R = pKF->GetRotation().t();
         vector<float> q = ORB_SLAM::Converter::toQuaternion(R);
         cv::Mat t = pKF->GetCameraCenter();
-        f << setprecision(6) << pKF->mTimeStamp << "," << pKF->mnId << setprecision(7) << "," << t.at<float>(0)*rangeScale << "," << t.at<float>(1)*rangeScale << "," << t.at<float>(2)*rangeScale
-          << "," << q[0] << "," << q[1] << "," << q[2] << "," << q[3] << endl;
+        f << setprecision(6) << pKF->mTimeStamp << setprecision(7) << " " << t.at<float>(0) << " " << t.at<float>(1) << " " << t.at<float>(2)
+          << " " << q[0] << " " << q[1] << " " << q[2] << " " << q[3] << endl;
 
     }
     f.close();

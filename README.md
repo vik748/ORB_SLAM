@@ -79,7 +79,7 @@ It only depends on OpenCV, but it should be included in the ROS distribution.
 		rosrun orb_slam orb_slam PATH_TO_VOCABULARY PATH_TO_SETTINGS_FILE
 
   You have to provide the path to the ORB vocabulary and to the settings file. The paths must be absolute or relative   to the orb_slam directory.  
-  We already provide the vocabulary file we use in `orb_slam/Data/ORBvoc.yml`. Uncompress the file, as it will be   loaded much faster.
+  We already provide the vocabulary file we use in `orb_slam/Data/ORBvoc.txt`. Uncompress the file, as it will be   loaded much faster.
 
 2. The last processed frame is published to the topic `/orb_slam/Frame`. You can visualize it using `image_view`:
 
@@ -124,7 +124,7 @@ We provide the settings and the rosbag of an example sequence in our lab. In thi
 
 	Uncompress the file.
 
-2. Launch ORB_SLAM with the settings for the example sequence. You should have already uncompressed the vocabulary file (`/Data/ORBvoc.yml.tar.gz`)
+2. Launch ORB_SLAM with the settings for the example sequence. You should have already uncompressed the vocabulary file (`/Data/ORBvoc.txt.tar.gz`)
 
   *in ROS Fuerte*:
 
