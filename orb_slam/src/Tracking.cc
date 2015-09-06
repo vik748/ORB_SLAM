@@ -195,9 +195,9 @@ void Tracking::GrabImages(const sensor_msgs::ImageConstPtr& msg,
         return;
     }
 
-    ROS_ASSERT(cv_ptr->image.channels()==3 || cv_ptr->image.channels()==1);
+    ROS_ASSERT(cv_ptr->image.channels()>=3 || cv_ptr->image.channels()==1);
 
-    if(cv_ptr->image.channels()==3)
+    if(cv_ptr->image.channels()>=3)
     {
         if(mbRGB)
             cvtColor(cv_ptr->image, im, CV_RGB2GRAY);
