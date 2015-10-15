@@ -41,7 +41,7 @@ class Tracking;
 class FramePublisher
 {
 public:
-    FramePublisher();
+    FramePublisher();    
 
     void Update(Tracking *pTracker);
 

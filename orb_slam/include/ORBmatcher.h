@@ -22,20 +22,20 @@
 #ifndef ORBMATCHER_H
 #define ORBMATCHER_H
 
-#include <vector>
-#include <opencv2/core/core.hpp>
-#include <opencv2/features2d/features2d.hpp>
+#include<vector>
+#include<opencv2/core/core.hpp>
+#include<opencv2/features2d/features2d.hpp>
 
-#include "MapPoint.h"
-#include "KeyFrame.h"
-#include "Frame.h"
+#include"MapPoint.h"
+#include"KeyFrame.h"
+#include"Frame.h"
 
 
 namespace ORB_SLAM
 {
 
 class ORBmatcher
-{
+{    
 public:
 
     ORBmatcher(float nnratio=0.6, bool checkOri=true);
@@ -57,7 +57,7 @@ public:
 
     // Project MapPoints using a Similarity Transformation and search matches.
     // Used in loop detection (Loop Closing)
-    int SearchByProjection(KeyFrame* pKF, cv::Mat Scw, const std::vector<MapPoint*> &vpPoints, std::vector<MapPoint*> &vpMatched, int th);
+     int SearchByProjection(KeyFrame* pKF, cv::Mat Scw, const std::vector<MapPoint*> &vpPoints, std::vector<MapPoint*> &vpMatched, int th);
 
     // Search matches between MapPoints in a KeyFrame and ORB in a Frame.
     // Brute force constrained to ORB that belong to the same vocabulary node (at a certain level)
@@ -104,7 +104,6 @@ protected:
 
     float mfNNratio;
     bool mbCheckOrientation;
-
 };
 
 }// namespace ORB_SLAM

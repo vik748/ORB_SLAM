@@ -245,7 +245,7 @@ void MapPoint::ComputeDistinctiveDescriptors()
 
     {
         boost::mutex::scoped_lock lock(mMutexFeatures);
-        mDescriptor = vDescriptors[BestIdx].clone();
+        mDescriptor = vDescriptors[BestIdx].clone();       
     }
 }
 
@@ -280,27 +280,27 @@ void MapPoint::UpdateNormalAndDepth()
         boost::mutex::scoped_lock lock2(mMutexPos);
         if(mbBad)
             return;
-        observations = mObservations;
-        pRefKF = mpRefKF;
+        observations=mObservations;
+        pRefKF=mpRefKF;
         Pos = mWorldPos.clone();
     }
 
     cv::Mat normal = cv::Mat::zeros(3,1,CV_32F);
     int n=0;
-    for(map<KeyFrame*,size_t>::iterator mit = observations.begin(), mend=observations.end(); mit!=mend; mit++)
+    for(map<KeyFrame*,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
     {
         KeyFrame* pKF = mit->first;
         cv::Mat Owi = pKF->GetCameraCenter();
         cv::Mat normali = mWorldPos - Owi;
         normal = normal + normali/cv::norm(normali);
         n++;
-    }
+    } 
 
     cv::Mat PC = Pos - pRefKF->GetCameraCenter();
     const float dist = cv::norm(PC);
     const int level = pRefKF->GetKeyPointScaleLevel(observations[pRefKF]);
     const float scaleFactor = pRefKF->GetScaleFactor();
-    const float levelScaleFactor = pRefKF->GetScaleFactor(level);
+    const float levelScaleFactor =  pRefKF->GetScaleFactor(level);
     const int nLevels = pRefKF->GetScaleLevels();
 
     {

@@ -18,11 +18,6 @@
 * along with ORB-SLAM. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <ros/ros.h>
-#include <ros/package.h>
-
-#include <boost/filesystem.hpp>
-
 #include "Map.h"
 
 namespace ORB_SLAM

@@ -44,7 +44,7 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "ORB_SLAM");
+    ros::init(argc, argv, "orb_slam");
     ros::start();
 
     cout << endl << "ORB-SLAM Copyright (C) 2014 Raul Mur-Artal" << endl <<
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
 
     if(argc != 3)
     {
-        cerr << endl << "Usage: rosrun ORB_SLAM ORB_SLAM path_to_vocabulary path_to_settings (absolute or relative to package directory)" << endl;
+        cerr << endl << "Usage: rosrun orb_slam orb_slam path_to_vocabulary path_to_settings (absolute or relative to package directory)" << endl;
         ros::shutdown();
         return 1;
     }
@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     cv::FileStorage fsSettings(strSettingsFile.c_str(), cv::FileStorage::READ);
     if(!fsSettings.isOpened())
     {
-        ROS_ERROR("Wrong path to settings. Path must be absolut or relative to ORB_SLAM package directory.");
+        ROS_ERROR("Wrong path to settings. Path must be absolut or relative to orb_slam package directory.");
         ros::shutdown();
         return 1;
     }
@@ -75,12 +75,12 @@ int main(int argc, char **argv)
 
     //Load ORB Vocabulary
    /* Old version to load vocabulary using cv::FileStorage
-    string strVocFile = ros::package::getPath("ORB_SLAM")+"/"+argv[1];
+    string strVocFile = ros::package::getPath("orb_slam")+"/"+argv[1];
     cout << endl << "Loading ORB Vocabulary. This could take a while." << endl;
     cv::FileStorage fsVoc(strVocFile.c_str(), cv::FileStorage::READ);
     if(!fsVoc.isOpened())
     {
-        cerr << endl << "Wrong path to vocabulary. Path must be absolut or relative to ORB_SLAM package directory." << endl;
+        cerr << endl << "Wrong path to vocabulary. Path must be absolut or relative to orb_slam package directory." << endl;
         ros::shutdown();
         return 1;
     }
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
 
     if(!bVocLoad)
     {
-        cerr << "Wrong path to vocabulary. Path must be absolut or relative to ORB_SLAM package directory." << endl;
+        cerr << "Wrong path to vocabulary. Path must be absolut or relative to orb_slam package directory." << endl;
         cerr << "Falied to open at: " << strVocFile << endl;
         ros::shutdown();
         return 1;

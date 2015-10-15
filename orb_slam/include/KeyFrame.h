@@ -29,7 +29,7 @@
 #include "Frame.h"
 #include "KeyFrameDatabase.h"
 
-#include <boost/thread.hpp>
+#include<boost/thread.hpp>
 
 
 namespace ORB_SLAM
@@ -193,7 +193,7 @@ protected:
     int mnMaxY;
     cv::Mat mK;
 
-    // KeyPoints, Descriptors, Points3D, MapPoints vectors (all associated by an index)
+    // KeyPoints, Descriptors, MapPoints vectors (all associated by an index)
     std::vector<cv::KeyPoint> mvKeys;
     std::vector<cv::KeyPoint> mvKeysUn;
     cv::Mat mDescriptors;

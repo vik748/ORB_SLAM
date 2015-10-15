@@ -1,0 +1,8 @@
+<launch>
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find orb_slam)/Data/rviz.rviz" output="log"></node>
+
+    <node pkg="orb_slam" type="orb_slam" name="orb_slam"  args="Data/ORBvoc.txt Data/Settings_Morse.yaml" cwd="node" output="screen">
+        <remap from="/camera/image_raw" to="/robot/Kinect/rgb/image" />
+    </node>
+</launch>

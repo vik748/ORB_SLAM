@@ -50,7 +50,7 @@ public:
     ORBVocabulary* mpORBvocabulary;
     ORBextractor* mpORBextractor;
 
-    // Mono image
+    // Frame image
     cv::Mat im;
 
     // Frame timestamp
@@ -128,7 +128,7 @@ public:
 
 private:
 
-    void UndistortKeyPoints(const std::vector<cv::KeyPoint> &kps, std::vector<cv::KeyPoint> &ukps);
+    void UndistortKeyPoints();
     void ComputeImageBounds();
 
     // Call UpdatePoseMatrices(), before using

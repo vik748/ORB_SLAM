@@ -70,7 +70,7 @@ protected:
 
     bool CheckNewKeyFrames();
     void ProcessNewKeyFrame();
-    void CreateNewMapPointsMono();
+    void CreateNewMapPoints();
 
     void MapPointCulling();
     void SearchInNeighbors();
@@ -96,7 +96,7 @@ protected:
 
     std::list<MapPoint*> mlpRecentAddedMapPoints;
 
-    boost::mutex mMutexNewKFs;
+    boost::mutex mMutexNewKFs;    
 
     bool mbAbortBA;
 

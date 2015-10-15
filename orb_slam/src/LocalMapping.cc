@@ -29,7 +29,7 @@ namespace ORB_SLAM
 {
 
 LocalMapping::LocalMapping(Map *pMap):
-    mbResetRequested(false), mpMap(pMap), mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbAcceptKeyFrames(true)
+    mbResetRequested(false), mpMap(pMap),  mbAbortBA(false), mbStopped(false), mbStopRequested(false), mbAcceptKeyFrames(true)
 {
 }
 
@@ -51,7 +51,7 @@ void LocalMapping::Run()
     {
         // Check if there are keyframes in the queue
         if(CheckNewKeyFrames())
-        {
+        {            
             // Tracking will see that Local Mapping is busy
             SetAcceptKeyFrames(false);
 
@@ -62,7 +62,7 @@ void LocalMapping::Run()
             MapPointCulling();
 
             // Triangulate new MapPoints
-            CreateNewMapPointsMono();
+            CreateNewMapPoints();
 
             // Find more matches in neighbor keyframes and fuse point duplications
             SearchInNeighbors();
@@ -163,7 +163,7 @@ void LocalMapping::ProcessNewKeyFrame()
                 mlpRecentAddedMapPoints.push_back(pMP);
             }
         }
-    }
+    }  
 
     // Update links in the Covisibility Graph
     mpCurrentKeyFrame->UpdateConnections();
@@ -202,7 +202,7 @@ void LocalMapping::MapPointCulling()
     }
 }
 
-void LocalMapping::CreateNewMapPointsMono()
+void LocalMapping::CreateNewMapPoints()
 {
     // Take neighbor keyframes in covisibility graph
     vector<KeyFrame*> vpNeighKFs = mpCurrentKeyFrame->GetBestCovisibilityKeyFrames(20);

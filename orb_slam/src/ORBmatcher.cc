@@ -21,15 +21,15 @@
 
 #include "ORBmatcher.h"
 
-#include <limits.h>
+#include<limits.h>
 
-#include <ros/ros.h>
-#include <opencv2/core/core.hpp>
-#include <opencv2/features2d/features2d.hpp>
+#include<ros/ros.h>
+#include<opencv2/core/core.hpp>
+#include<opencv2/features2d/features2d.hpp>
 
 #include "Thirdparty/DBoW2/DBoW2/FeatureVector.h"
 
-#include <stdint-gcc.h>
+#include<stdint-gcc.h>
 
 
 using namespace std;
@@ -61,7 +61,7 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
         if(pMP->isBad())
             continue;
 
-        const int &nPredictedLevel = pMP->mnTrackScaleLevel;
+        const int &nPredictedLevel = pMP->mnTrackScaleLevel;    
 
         // The size of the window will depend on the viewing direction
         float r = RadiusByViewingCos(pMP->mTrackViewCos);
@@ -77,9 +77,9 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
 
         cv::Mat MPdescriptor = pMP->GetDescriptor();
 
-        int bestDist = INT_MAX;
-        int bestLevel = -1;
-        int bestDist2 = INT_MAX;
+        int bestDist=INT_MAX;
+        int bestLevel= -1;
+        int bestDist2=INT_MAX;
         int bestLevel2 = -1;
         int bestIdx =-1 ;
 
@@ -91,22 +91,22 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
             if(F.mvpMapPoints[idx])
                 continue;
 
-            cv::Mat d = F.mDescriptors.row(idx);
+            cv::Mat d=F.mDescriptors.row(idx);
 
             const int dist = DescriptorDistance(MPdescriptor,d);
 
             if(dist<bestDist)
             {
-                bestDist2 = bestDist;
-                bestDist = dist;
+                bestDist2=bestDist;
+                bestDist=dist;
                 bestLevel2 = bestLevel;
                 bestLevel = F.mvKeysUn[idx].octave;
-                bestIdx = idx;
+                bestIdx=idx;
             }
             else if(dist<bestDist2)
             {
                 bestLevel2 = F.mvKeysUn[idx].octave;
-                bestDist2 = dist;
+                bestDist2=dist;
             }
         }
 
@@ -116,7 +116,7 @@ int ORBmatcher::SearchByProjection(Frame &F, const vector<MapPoint*> &vpMapPoint
             if(bestLevel==bestLevel2 && bestDist>mfNNratio*bestDist2)
                 continue;
 
-            F.mvpMapPoints[bestIdx] = pMP;
+            F.mvpMapPoints[bestIdx]=pMP;
             nmatches++;
         }
     }
@@ -418,7 +418,7 @@ int ORBmatcher::WindowSearch(Frame &F1, Frame &F2, int windowSize, vector<MapPoi
     const float factor = 1.0f/HISTO_LENGTH;
 
     const bool bMinLevel = minScaleLevel>0;
-    const bool bMaxLevel = maxScaleLevel<INT_MAX;
+    const bool bMaxLevel= maxScaleLevel<INT_MAX;
 
     for(size_t i1=0, iend1=F1.mvpMapPoints.size(); i1<iend1; i1++)
     {
@@ -464,9 +464,9 @@ int ORBmatcher::WindowSearch(Frame &F1, Frame &F2, int windowSize, vector<MapPoi
 
             if(dist<bestDist)
             {
-                bestDist2 = bestDist;
-                bestDist = dist;
-                bestIdx2 = i2;
+                bestDist2=bestDist;
+                bestDist=dist;
+                bestIdx2=i2;
             } else if(dist<bestDist2)
             {
                 bestDist2=dist;
@@ -1119,7 +1119,7 @@ int ORBmatcher::Fuse(KeyFrame *pKF, vector<MapPoint *> &vpMapPoints, float th)
             if(pMPinKF)
             {
                 if(!pMPinKF->isBad())
-                    pMP->Replace(pMPinKF);
+                    pMP->Replace(pMPinKF);                
             }
             else
             {
@@ -1592,7 +1592,7 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, 
                 }
             }
         }
-    }
+    }  
 
    //Apply rotation consistency
    if(mbCheckOrientation)
