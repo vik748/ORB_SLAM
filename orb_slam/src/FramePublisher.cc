@@ -49,11 +49,15 @@ void FramePublisher::SetMap(Map *pMap)
 
 void FramePublisher::Refresh()
 {
+  //save computation if their is no subscriber
+  if(mImagePub.getNumSubscribers() > 0)
+  {
     if(mbUpdated)
     {
         PublishFrame();
         mbUpdated = false;
     }
+  }
 }
 
 cv::Mat FramePublisher::DrawFrame()
