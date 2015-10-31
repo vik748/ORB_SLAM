@@ -30,6 +30,7 @@
 #include "FramePublisher.h"
 #include "Map.h"
 #include "MapPublisher.h"
+#include "OctoMapPublisher.h"
 #include "LocalMapping.h"
 #include "LoopClosing.h"
 #include "KeyFrameDatabase.h"
@@ -117,6 +118,9 @@ int main(int argc, char **argv)
 
     //Create Map Publisher for Rviz
     ORB_SLAM::MapPublisher MapPub(&World);
+
+    //Create a OctoMap service provider and publisher
+    ORB_SLAM::OctoMapPublisher OctoMapServPub(&World);
 
     //Initialize the Tracking Thread and launch
     ORB_SLAM::Tracking Tracker(&Vocabulary, &FramePub, &MapPub, &World, strSettingsFile);

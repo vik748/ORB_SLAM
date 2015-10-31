@@ -10,12 +10,23 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   pcl_ros
   g2o
+  message_generation
 )
 
 #LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 #find_package(Cholmod REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
+find_package(octomap 1.6 REQUIRED)
+
+add_service_files(
+  FILES
+  SaveOctomap.srv
+)
+
+generate_messages(
+   DEPENDENCIES
+)
 
 catkin_package()
 
@@ -31,6 +42,7 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
   ${CHOLMOD_INCLUDE_DIR}
   ${PROJECT_SOURCE_DIR}
+  ${OCTOMAP_INCLUDE_DIRS}
 )
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall  -O3 -march=native ")
@@ -51,6 +63,7 @@ add_executable(${PROJECT_NAME}
   src/KeyFrame.cc
   src/Map.cc
   src/MapPublisher.cc
+  src/OctoMapPublisher.cc
   src/Optimizer.cc
   src/PnPsolver.cc
   src/Frame.cc
@@ -58,9 +71,13 @@ add_executable(${PROJECT_NAME}
   src/Sim3Solver.cc
   src/Initializer.cc
 )
+
+add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
+
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${EIGEN3_LIBS}
+  ${OCTOMAP_LIBRARIES}
 #  cholmod
   DBoW2
 #  g2o_core
