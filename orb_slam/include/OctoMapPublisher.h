@@ -29,6 +29,8 @@
 
 #include <octomap_msgs/GetOctomap.h>
 
+#include <pcl_ros/point_cloud.h>
+
 #include "orb_slam/SaveOctomap.h"
 
 #include"Map.h"
@@ -38,15 +40,15 @@
 namespace ORB_SLAM
 {
 
+/**
+ * This class provides services for providing octomaps and publishes point clouds
+ */
 class OctoMapPublisher
 {
 public:
     OctoMapPublisher(Map* pMap);
 
-    Map* mpMap;
-
     void RefreshMap();
-    void UpdateOctoMapFromMapPoints(const std::vector<MapPoint*> &vpMPs, const std::vector<MapPoint*> &vpRefMPs);
 
     void Publish();
 
@@ -56,9 +58,9 @@ public:
 
 private:
 
-    cv::Mat GetCurrentCameraPose();
-    bool isCamUpdated();
-    void ResetCamFlag();
+    void updateOctoMapFromMapPoints(const std::vector<MapPoint*> &vpMPs, const std::vector<MapPoint*> &vpRefMPs);
+
+    void mapPointsToPCL(const std::vector<MapPoint*> &vpMPs, const std::vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ> pclCloud);
 
     bool octomapBinarySrv(octomap_msgs::GetOctomapRequest  &req,
                           octomap_msgs::GetOctomapResponse &res);
@@ -70,6 +72,8 @@ private:
                         orb_slam::SaveOctomapResponse &res);
 
     ros::NodeHandle nh;
+
+    Map* mpMap;
 
     boost::mutex mMutexCamera;
 

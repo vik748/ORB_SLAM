@@ -23,6 +23,9 @@
 #include "KeyFrame.h"
 #include <octomap_msgs/conversions.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
+
 
 namespace ORB_SLAM
 {
@@ -99,7 +102,7 @@ bool OctoMapPublisher::octomapSaveSrv(orb_slam::SaveOctomapRequest  &req,
 }
 
 
-OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"), mpMap(pMap), MAP_FRAME_ID("/ORB_SLAM/World"),m_octoMap(0.10) {
+OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"), mpMap(pMap), MAP_FRAME_ID("/ORB_SLAM/World"), m_octoMap(0.10) {
 
   //Configure Publisher
   publisher = nh.advertise<sensor_msgs::PointCloud2>("/PointCloud", 10);
@@ -115,7 +118,23 @@ void OctoMapPublisher::Publish()
   //save computation if their is no subscriber
   if(publisher.getNumSubscribers() > 0 )
   {
-    //TODO publish pointcloud
+    pcl::PointCloud<pcl::PointXYZ> pclCloud;
+
+    vector<MapPoint*> vMapPoints = mpMap->GetAllMapPoints();
+
+    vector<MapPoint*> vRefMapPoints = mpMap->GetReferenceMapPoints();
+
+    mapPointsToPCL(vMapPoints, vRefMapPoints, pclCloud);
+
+    sensor_msgs::PointCloud2 msgPointCloud;
+
+    pcl::toROSMsg(pclCloud, msgPointCloud);
+
+    publisher.publish(msgPointCloud);
+
+    //TODO publish TF for PCL
+    //TODO publish only new POINTs
+    //TODO publish only on update (maybe save last update time (or index) in mpMap
 //    if(mpMap->isMapUpdated())
 //    {
   //        mpMap->ResetUpdated();
@@ -132,11 +151,11 @@ void OctoMapPublisher::RefreshMap()
 
   vector<MapPoint*> vRefMapPoints = mpMap->GetReferenceMapPoints();
 
-  UpdateOctoMapFromMapPoints(vMapPoints, vRefMapPoints);
+  updateOctoMapFromMapPoints(vMapPoints, vRefMapPoints);
 
 }
 
-void OctoMapPublisher::UpdateOctoMapFromMapPoints(const vector<MapPoint*> &vpMPs, const vector<MapPoint*> &vpRefMPs)
+void OctoMapPublisher::updateOctoMapFromMapPoints(const vector<MapPoint*> &vpMPs, const vector<MapPoint*> &vpRefMPs)
 {
   Pointcloud pointCloud;
 
@@ -154,6 +173,23 @@ void OctoMapPublisher::UpdateOctoMapFromMapPoints(const vector<MapPoint*> &vpMPs
   octomap::point3d origin;
 
   m_octoMap.insertPointCloud(pointCloud,origin,-1,false, false);
+}
+
+void OctoMapPublisher::mapPointsToPCL(const vector<MapPoint*> &vpMPs, const vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ> pclCloud)
+{
+  set<MapPoint*> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
+
+  for(size_t i=0, iend=vpMPs.size(); i<iend;i++)
+  {
+      if(vpMPs[i]->isBad() || spRefMPs.count(vpMPs[i]))
+          continue;
+      cv::Mat pos = vpMPs[i]->GetWorldPos();
+
+      pcl::PointXYZ point(pos.at<float>(0), pos.at<float>(1),pos.at<float>(2));
+      pclCloud.points.push_back(point);
+  }
+  pclCloud.height = 1; //unstructured cloud
+  pclCloud.width = pclCloud.points.size();
 }
 
 } //namespace ORB_SLAM
