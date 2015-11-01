@@ -35,6 +35,7 @@
 #include "LoopClosing.h"
 #include "KeyFrameDatabase.h"
 #include "ORBVocabulary.h"
+#include "StatePublisher.h"
 
 
 #include "Converter.h"
@@ -146,6 +147,8 @@ int main(int argc, char **argv)
     LoopCloser.SetTracker(&Tracker);
     LoopCloser.SetLocalMapper(&LocalMapper);
 
+    ORB_SLAM::StatePublisher StatePublisher(&Tracker);
+
     //This "main" thread will show the current processed frame and publish the map
     float fps = fsSettings["Camera.fps"];
     if(fps==0)
@@ -158,6 +161,8 @@ int main(int argc, char **argv)
         FramePub.Refresh();
         MapPub.Refresh();
         Tracker.CheckResetByPublishers();
+        OctoMapServPub.Publish();
+        StatePublisher.Publish();
         r.sleep();
     }
 

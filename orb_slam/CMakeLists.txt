@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   image_geometry
   cv_bridge
   pcl_ros
+  pcl_conversions
   g2o
   message_generation
 )
@@ -19,16 +20,26 @@ find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(octomap 1.6 REQUIRED)
 
+## Generate messages in the 'msg' folder
+add_message_files(
+  FILES
+  ORBState.msg
+)
+
 add_service_files(
   FILES
   SaveOctomap.srv
 )
 
 generate_messages(
-   DEPENDENCIES
+  DEPENDENCIES
+  std_msgs
 )
 
-catkin_package()
+catkin_package(
+  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs 
+  DEPENDS message_runtime std_msgs 
+)
 
 message(*************************)
 message(${catkin_INCLUDE_DIRS})
@@ -69,6 +80,7 @@ add_executable(${PROJECT_NAME}
   src/Frame.cc
   src/KeyFrameDatabase.cc
   src/Sim3Solver.cc
+  src/StatePublisher.cc
   src/Initializer.cc
 )
 
