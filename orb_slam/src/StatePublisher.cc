@@ -27,7 +27,7 @@ namespace ORB_SLAM
 StatePublisher::StatePublisher(Tracking* tracking):nh("~"), mpTracking(tracking) {
 
   //Configure Publisher
-  mPublisher = nh.advertise<orb_slam::ORBState>("/State", 10);
+  mPublisher = nh.advertise<orb_slam::ORBState>("State", 10);
 
   mMsgState.header.frame_id = "ORB_SLAM";
 
