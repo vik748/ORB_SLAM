@@ -31,6 +31,8 @@
 
 #include <pcl_ros/point_cloud.h>
 
+#include <tf/transform_listener.h>
+
 #include "orb_slam/SaveOctomap.h"
 
 #include"Map.h"
@@ -88,6 +90,8 @@ private:
   ros::ServiceServer m_octomapSaveService;
   ros::ServiceServer m_octomapBinaryService;
   ros::ServiceServer m_octomapFullService;
+
+  tf::TransformListener m_tf_listener;
 };
 
 } //namespace ORB_SLAM

@@ -22,6 +22,7 @@
 #include "MapPoint.h"
 #include "KeyFrame.h"
 #include <octomap_msgs/conversions.h>
+#include <octomap_ros/conversions.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -137,8 +138,7 @@ void OctoMapPublisher::publishPointCloud()
     msgPointCloud.header.stamp = ros::Time::now();
     msgPointCloud.header.seq++;
     publisherPCL.publish(msgPointCloud);
-    //TODO publish TF for PCL
-    //TODO publish only new POINTs
+
     //TODO publish only on update (maybe save last update time (or index) in mpMap
     //    if(mpMap->isMapUpdated())
     //    {
@@ -187,12 +187,10 @@ void OctoMapPublisher::Publish()
 
 void OctoMapPublisher::refreshMap(octomap::ColorOcTree& octoMap)
 {
-
   reset(octoMap);
   vector<MapPoint*> vMapPoints = mpMap->GetAllMapPoints();
 
   mapPointsToOctomap(vMapPoints, octoMap);
-
 }
 
 void OctoMapPublisher::mapPointsToOctomap(const vector<MapPoint*> &vpMPs, octomap::ColorOcTree& octoMap)
@@ -211,9 +209,21 @@ void OctoMapPublisher::mapPointsToOctomap(const vector<MapPoint*> &vpMPs, octoma
 
   octomap::point3d origin;
 
-  //TODO may rotate relative to base_link
-  //TODO test discretize=true
-  octoMap.insertPointCloud(pointCloud,origin,-1,false, false);
+  try{
+
+    tf::StampedTransform transform_in_target_frame;
+
+    m_tf_listener.lookupTransform("ORB_base_link", CAMERA_FRAME_ID, ros::Time(0) , transform_in_target_frame);
+
+    octomap::pose6d frame = octomap::poseTfToOctomap(transform_in_target_frame);
+
+    //TODO test discretize=true
+    //TODO potential option insert only current like used for point cloud and integrate octomap
+    octoMap.insertPointCloud(pointCloud, origin, frame, -1, false, false);
+  }catch(...){
+    ROS_ERROR("TF not available");
+    octoMap.insertPointCloud(pointCloud, origin, -1, false, false);
+  }
 }
 
 void OctoMapPublisher::mapPointsToPCL(const vector<MapPoint*> &vpMPs, const vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud)
