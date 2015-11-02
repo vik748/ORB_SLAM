@@ -33,11 +33,14 @@
 
 #include <tf/transform_listener.h>
 
+#include <nav_msgs/OccupancyGrid.h>
+
 #include "orb_slam/SaveOctomap.h"
 
 #include"Map.h"
 #include"MapPoint.h"
 #include"KeyFrame.h"
+
 
 namespace ORB_SLAM
 {
@@ -64,6 +67,12 @@ private:
 
   void mapPointsToPCL(const std::vector<MapPoint*> &vpMPs, const std::vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud);
 
+  void octomapToOccupancyGrid(const octomap::ColorOcTree& octree, nav_msgs::OccupancyGrid& map){
+    octomapToOccupancyGrid(octree, map, -1.0*std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
+  }
+
+  void octomapToOccupancyGrid(const octomap::ColorOcTree& octree, nav_msgs::OccupancyGrid& map, const double minZ_, const double maxZ_ );
+
   bool octomapBinarySrv(octomap_msgs::GetOctomapRequest  &req,
                         octomap_msgs::GetOctomapResponse &res);
 
@@ -75,6 +84,7 @@ private:
 
   void publishPointCloud();
   void publishOctomap();
+  void publishProjectedMap();
 
   ros::NodeHandle nh;
 
@@ -86,6 +96,7 @@ private:
   ros::Publisher publisherPCL;
   ros::Publisher publisherOctomapFull;
   ros::Publisher publisherOctomapBinary;
+  ros::Publisher publisherProjected;
 
   ros::ServiceServer m_octomapSaveService;
   ros::ServiceServer m_octomapBinaryService;

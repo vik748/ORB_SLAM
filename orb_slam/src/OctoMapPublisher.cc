@@ -23,9 +23,11 @@
 #include "KeyFrame.h"
 #include <octomap_msgs/conversions.h>
 #include <octomap_ros/conversions.h>
+#include <octomap/OcTreeKey.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <nav_msgs/OccupancyGrid.h>
 
 #define DEFAULT_OCTOMAP_RESOLUTION 0.1
 
@@ -116,11 +118,91 @@ OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"), mpMap(pMap), MAP_FRAME_ID
   publisherPCL = nh.advertise<sensor_msgs::PointCloud2>("point_cloud", 10);
   publisherOctomapFull = nh.advertise<octomap_msgs::Octomap>("octomap_full", 10);
   publisherOctomapBinary = nh.advertise<octomap_msgs::Octomap>("octomap_binary", 10);
+  publisherProjected = nh.advertise<nav_msgs::OccupancyGrid>("projected_map", 5, 10);
 
   //Configure Services
   m_octomapSaveService = nh.advertiseService("save_octomap", &OctoMapPublisher::octomapSaveSrv, this);
   m_octomapBinaryService = nh.advertiseService("octomap_binary", &OctoMapPublisher::octomapBinarySrv, this);
   m_octomapFullService = nh.advertiseService("octomap_full", &OctoMapPublisher::octomapFullSrv, this);
+}
+
+void OctoMapPublisher::octomapToOccupancyGrid(const octomap::ColorOcTree& octree,nav_msgs::OccupancyGrid& map, const double minZ_, const double maxZ_ )
+{
+  map.info.resolution = octree.getResolution();
+  double minX, minY, minZ;
+  double maxX, maxY, maxZ;
+  octree.getMetricMin(minX, minY, minZ);
+  octree.getMetricMax(maxX, maxY, maxZ);
+  ROS_INFO("Octree min %f %f %f", minX, minY, minZ);
+  ROS_INFO("Octree max %f %f %f", maxX, maxY, maxZ);
+  minZ = std::max(minZ_, minZ);
+  maxZ = std::min(maxZ_, maxZ);
+
+  octomap::point3d minPt(minX, minY, minZ);
+  octomap::point3d maxPt(maxX, maxY, maxZ);
+  octomap::OcTreeKey minKey, maxKey, curKey;
+
+  if (!octree.coordToKeyChecked(minPt, minKey))
+  {
+    ROS_ERROR("Could not create OcTree key at %f %f %f", minPt.x(), minPt.y(), minPt.z());
+    return;
+  }
+  if (!octree.coordToKeyChecked(maxPt, maxKey))
+  {
+    ROS_ERROR("Could not create OcTree key at %f %f %f", maxPt.x(), maxPt.y(), maxPt.z());
+    return;
+  }
+
+  map.info.width = maxKey[0] - minKey[0] + 1;
+  map.info.height = maxKey[1] - minKey[1] + 1;
+
+  // might not exactly be min / max:
+  octomap::point3d origin =   octree.keyToCoord(minKey, octree.getTreeDepth());
+  map.info.origin.position.x = origin.x() - octree.getResolution() * 0.5;
+  map.info.origin.position.y = origin.y() - octree.getResolution() * 0.5;
+
+  // Allocate space to hold the data
+  map.data.resize(map.info.width * map.info.height, -1);
+  // iterate over all keys:
+  unsigned i, j;
+  for (curKey[1] = minKey[1], j = 0; curKey[1] <= maxKey[1]; ++curKey[1], ++j)
+  {
+    for (curKey[0] = minKey[0], i = 0; curKey[0] <= maxKey[0]; ++curKey[0], ++i)
+    {
+      for (curKey[2] = minKey[2]; curKey[2] <= maxKey[2]; ++curKey[2])
+      { //iterate over height
+        octomap::OcTreeNode* node = octree.search(curKey);
+        if (node)
+        {
+          bool occupied = octree.isNodeOccupied(node);
+          if(occupied){
+            map.data[map.info.width * j + i] = 100;
+            break;
+          }else{
+            map.data[map.info.width * j + i] = 0;
+          }
+        }
+      }
+    }
+  }
+}
+
+void OctoMapPublisher::publishProjectedMap()
+{
+  static nav_msgs::OccupancyGrid msgOccupancy;
+  if (publisherProjected.getNumSubscribers() > 0)
+  {
+    static octomap::ColorOcTree octoMap(DEFAULT_OCTOMAP_RESOLUTION);
+    ros::Time now = ros::Time::now();
+    refreshMap(octoMap);
+    msgOccupancy.header.frame_id = MAP_FRAME_ID;
+    msgOccupancy.header.stamp = now;
+
+    octomapToOccupancyGrid(octoMap, msgOccupancy);
+
+    publisherProjected.publish(msgOccupancy);
+
+  }
 }
 
 void OctoMapPublisher::publishPointCloud()
@@ -183,6 +265,8 @@ void OctoMapPublisher::Publish()
   publishPointCloud();
 
   publishOctomap();
+
+  publishProjectedMap();
 }
 
 void OctoMapPublisher::refreshMap(octomap::ColorOcTree& octoMap)
