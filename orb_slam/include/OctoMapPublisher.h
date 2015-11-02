@@ -46,46 +46,48 @@ namespace ORB_SLAM
 class OctoMapPublisher
 {
 public:
-    OctoMapPublisher(Map* pMap);
+  OctoMapPublisher(Map* pMap);
 
-    void RefreshMap();
-
-    void Publish();
-
-    void reset();
-
-    bool save(string filename);
+  void Publish();
 
 private:
 
-    void updateOctoMapFromMapPoints(const std::vector<MapPoint*> &vpMPs, const std::vector<MapPoint*> &vpRefMPs);
+  bool save(string filename);
 
-    void mapPointsToPCL(const std::vector<MapPoint*> &vpMPs, const std::vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ> pclCloud);
+  void refreshMap(octomap::ColorOcTree& octoMap);
 
-    bool octomapBinarySrv(octomap_msgs::GetOctomapRequest  &req,
-                          octomap_msgs::GetOctomapResponse &res);
+  void reset(octomap::ColorOcTree& octoMap);
 
-    bool octomapFullSrv(octomap_msgs::GetOctomapRequest  &req,
+  void mapPointsToOctomap(const std::vector<MapPoint*> &vpMPs, octomap::ColorOcTree& m_octoMap);
+
+  void mapPointsToPCL(const std::vector<MapPoint*> &vpMPs, const std::vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud);
+
+  bool octomapBinarySrv(octomap_msgs::GetOctomapRequest  &req,
                         octomap_msgs::GetOctomapResponse &res);
 
-    bool octomapSaveSrv(orb_slam::SaveOctomapRequest  &req,
-                        orb_slam::SaveOctomapResponse &res);
+  bool octomapFullSrv(octomap_msgs::GetOctomapRequest  &req,
+                      octomap_msgs::GetOctomapResponse &res);
 
-    ros::NodeHandle nh;
+  bool octomapSaveSrv(orb_slam::SaveOctomapRequest  &req,
+                      orb_slam::SaveOctomapResponse &res);
 
-    Map* mpMap;
+  void publishPointCloud();
+  void publishOctomap();
 
-    boost::mutex mMutexCamera;
+  ros::NodeHandle nh;
 
-    const char* MAP_FRAME_ID;
+  Map* mpMap;
 
-    octomap::ColorOcTree m_octoMap;
+  const char* MAP_FRAME_ID;
+  const char* CAMERA_FRAME_ID;
 
-    ros::Publisher publisher;
+  ros::Publisher publisherPCL;
+  ros::Publisher publisherOctomapFull;
+  ros::Publisher publisherOctomapBinary;
 
-    ros::ServiceServer m_octomapSaveService;
-    ros::ServiceServer m_octomapBinaryService;
-    ros::ServiceServer m_octomapFullService;
+  ros::ServiceServer m_octomapSaveService;
+  ros::ServiceServer m_octomapBinaryService;
+  ros::ServiceServer m_octomapFullService;
 };
 
 } //namespace ORB_SLAM
