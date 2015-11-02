@@ -31,6 +31,8 @@
 
 #define DEFAULT_OCTOMAP_RESOLUTION 0.1
 
+#define PROJECTION_MIN_HEIGHT 0.1
+
 
 namespace ORB_SLAM
 {
@@ -111,6 +113,21 @@ bool OctoMapPublisher::octomapSaveSrv(orb_slam::SaveOctomapRequest  &req,
   return save(req.filename);
 }
 
+bool OctoMapPublisher::occupancySrv(nav_msgs::GetMapRequest  &req,
+                                    nav_msgs::GetMapResponse &res)
+{
+  static octomap::ColorOcTree octoMap(DEFAULT_OCTOMAP_RESOLUTION);
+  refreshMap(octoMap);
+  ROS_INFO("Sending full map data on service request");
+  res.map.header.frame_id = MAP_FRAME_ID;
+  res.map.header.stamp = ros::Time::now();
+
+  //XXX no fixed limits
+  octomapToOccupancyGrid(octoMap, res.map, PROJECTION_MIN_HEIGHT, std::numeric_limits<double>::max());
+
+  return true;
+}
+
 
 OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"), mpMap(pMap), MAP_FRAME_ID("/ORB_SLAM/World"), CAMERA_FRAME_ID("/ORB_SLAM/Camera") {
 
@@ -124,6 +141,7 @@ OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"), mpMap(pMap), MAP_FRAME_ID
   m_octomapSaveService = nh.advertiseService("save_octomap", &OctoMapPublisher::octomapSaveSrv, this);
   m_octomapBinaryService = nh.advertiseService("octomap_binary", &OctoMapPublisher::octomapBinarySrv, this);
   m_octomapFullService = nh.advertiseService("octomap_full", &OctoMapPublisher::octomapFullSrv, this);
+  m_occupancyService = nh.advertiseService("occupancy_grid", &OctoMapPublisher::occupancySrv, this);
 }
 
 void OctoMapPublisher::octomapToOccupancyGrid(const octomap::ColorOcTree& octree,nav_msgs::OccupancyGrid& map, const double minZ_, const double maxZ_ )
@@ -198,7 +216,8 @@ void OctoMapPublisher::publishProjectedMap()
     msgOccupancy.header.frame_id = MAP_FRAME_ID;
     msgOccupancy.header.stamp = now;
 
-    octomapToOccupancyGrid(octoMap, msgOccupancy);
+    //XXX no fixed limits
+    octomapToOccupancyGrid(octoMap, msgOccupancy, PROJECTION_MIN_HEIGHT, std::numeric_limits<double>::max());
 
     publisherProjected.publish(msgOccupancy);
 

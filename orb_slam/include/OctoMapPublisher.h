@@ -34,6 +34,7 @@
 #include <tf/transform_listener.h>
 
 #include <nav_msgs/OccupancyGrid.h>
+#include <nav_msgs/GetMap.h>
 
 #include "orb_slam/SaveOctomap.h"
 
@@ -82,6 +83,9 @@ private:
   bool octomapSaveSrv(orb_slam::SaveOctomapRequest  &req,
                       orb_slam::SaveOctomapResponse &res);
 
+  bool occupancySrv(nav_msgs::GetMapRequest  &req,
+                                      nav_msgs::GetMapResponse &res);
+
   void publishPointCloud();
   void publishOctomap();
   void publishProjectedMap();
@@ -101,6 +105,7 @@ private:
   ros::ServiceServer m_octomapSaveService;
   ros::ServiceServer m_octomapBinaryService;
   ros::ServiceServer m_octomapFullService;
+  ros::ServiceServer m_occupancyService;
 
   tf::TransformListener m_tf_listener;
 };
