@@ -1,6 +1,6 @@
 <launch>
 
-    <node pkg="orb_slam" type="orb_slam" name="orb_slam"  args="Data/ORBvoc.txt Data/Settings_bluefox_6mm.yaml" cwd="node" output="screen">
+    <node pkg="orb_slam" type="orb_slam" name="orb_slam"  args="Data/ORBvoc.txt Data/Settings_bluefox_6mm_fuji.yaml" cwd="node" output="screen">
         
 	    <remap from="/camera/image_raw" to="/bluefox/image_raw" />
     </node>
