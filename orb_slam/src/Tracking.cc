@@ -165,9 +165,16 @@ void Tracking::Run()
     ros::spin();
 }
 
+void Tracking::GrabRange(const sensor_msgs::ImageConstPtr& msg,
+                         const sensor_msgs::RangeConstPtr& range)
+{
+    boost::mutex::scoped_lock lock(mMutexRange);
+    mRange = range->range;
+    mRangeStamp = msg->header.stamp.toSec();
+}
+
 void Tracking::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {
-
     cv::Mat im;
 
     // Copy the ros image message to cv::Mat. Convert to grayscale if it is a color image.
@@ -247,7 +254,7 @@ void Tracking::GrabImage(const sensor_msgs::ImageConstPtr& msg)
         // If tracking were good, check if we insert a keyframe
         if(bOK)
         {
-            mpMapPublisher->SetCurrentCameraPose(mCurrentFrame.mTcw);
+            mpMapPublisher->SetCurrentCameraPose(mCurrentFrame.mTcw, mCurrentFrame.mTimeStamp, mRange, mRangeStamp);
 
             if(NeedNewKeyFrame())
                 CreateNewKeyFrame();
@@ -477,7 +484,7 @@ void Tracking::CreateInitialMap(cv::Mat &Rcw, cv::Mat &tcw)
 
     mpMap->SetReferenceMapPoints(mvpLocalMapPoints);
 
-    mpMapPublisher->SetCurrentCameraPose(pKFcur->GetPose());
+    mpMapPublisher->SetCurrentCameraPose(pKFcur->GetPose(), pKFcur->mTimeStamp, mRange, mRangeStamp);
 
     mState=WORKING;
 }

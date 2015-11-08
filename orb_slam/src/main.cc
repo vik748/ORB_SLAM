@@ -176,6 +176,9 @@ int main(int argc, char **argv)
     string strFile = ros::package::getPath("orb_slam")+"/"+"KeyFrameTrajectory.txt";
     f.open(strFile.c_str());
     f << fixed;
+    float rangeScale = MapPub.GetRangeScale();
+    if (rangeScale < 0)
+        rangeScale = 1;
 
     for(size_t i=0; i<vpKFs.size(); i++)
     {
@@ -187,8 +190,8 @@ int main(int argc, char **argv)
         cv::Mat R = pKF->GetRotation().t();
         vector<float> q = ORB_SLAM::Converter::toQuaternion(R);
         cv::Mat t = pKF->GetCameraCenter();
-        f << setprecision(6) << pKF->mTimeStamp << setprecision(7) << " " << t.at<float>(0) << " " << t.at<float>(1) << " " << t.at<float>(2)
-          << " " << q[0] << " " << q[1] << " " << q[2] << " " << q[3] << endl;
+        f << setprecision(6) << pKF->mTimeStamp << "," << pKF->mnId << setprecision(7) << "," << t.at<float>(0)*rangeScale << "," << t.at<float>(1)*rangeScale << "," << t.at<float>(2)*rangeScale
+          << "," << q[0] << "," << q[1] << "," << q[2] << "," << q[3] << endl;
 
     }
     f.close();

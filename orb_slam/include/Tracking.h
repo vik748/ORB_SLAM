@@ -25,6 +25,12 @@
 #include<opencv2/features2d/features2d.hpp>
 #include<sensor_msgs/Image.h>
 #include<sensor_msgs/image_encodings.h>
+#include <sensor_msgs/Range.h>
+#include <image_transport/subscriber_filter.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/time_synchronizer.h>
+#include <message_filters/sync_policies/exact_time.h>
+#include <message_filters/sync_policies/approximate_time.h>
 
 #include"FramePublisher.h"
 #include"Map.h"
@@ -91,6 +97,9 @@ public:
 
 protected:
     void GrabImage(const sensor_msgs::ImageConstPtr& msg);
+
+    void GrabRange(const sensor_msgs::ImageConstPtr& msg,
+                   const sensor_msgs::RangeConstPtr& range);
 
     void FirstInitialization();
     void Initialize();
@@ -162,6 +171,7 @@ protected:
     //Mutex
     boost::mutex mMutexTrack;
     boost::mutex mMutexForceRelocalisation;
+    boost::mutex mMutexRange;
 
     //Reset
     bool mbPublisherStopped;
@@ -180,6 +190,19 @@ protected:
 
     // Transfor broadcaster (for visualization in rviz)
     tf::TransformBroadcaster mTfBr;
+
+
+    // Range
+    float mRange;
+    double mRangeStamp;
+
+    message_filters::Subscriber<sensor_msgs::Range> mRangeSub;
+
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
+                                                            sensor_msgs::Range> policyRange;
+    typedef message_filters::Synchronizer<policyRange> mPoliceSyncRange;
+    boost::shared_ptr<mPoliceSyncRange> mSyncRange;
+
 };
 
 } //namespace ORB_SLAM

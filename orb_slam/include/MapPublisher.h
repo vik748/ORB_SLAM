@@ -23,10 +23,12 @@
 
 #include<ros/ros.h>
 #include <visualization_msgs/Marker.h>
+#include <geometry_msgs/PoseStamped.h>
 
-#include"Map.h"
-#include"MapPoint.h"
-#include"KeyFrame.h"
+#include "Map.h"
+#include "MapPoint.h"
+#include "KeyFrame.h"
+#include "Converter.h"
 
 namespace ORB_SLAM
 {
@@ -42,7 +44,8 @@ public:
     void PublishMapPoints(const std::vector<MapPoint*> &vpMPs, const std::vector<MapPoint*> &vpRefMPs);
     void PublishKeyFrames(const std::vector<KeyFrame*> &vpKFs);
     void PublishCurrentCamera(const cv::Mat &Tcw);
-    void SetCurrentCameraPose(const cv::Mat &Tcw);
+    void SetCurrentCameraPose(const cv::Mat &Tcw, const double &poseStamp, const float &range, const double &rangeStamp);
+    float GetRangeScale();
 
 private:
 
@@ -51,7 +54,7 @@ private:
     void ResetCamFlag();
 
     ros::NodeHandle nh;
-    ros::Publisher publisher;
+    ros::Publisher mMapPublisher, mPosePublisher;
 
     visualization_msgs::Marker mPoints;
     visualization_msgs::Marker mReferencePoints;
@@ -66,6 +69,13 @@ private:
 
     cv::Mat mCameraPose;
     bool mbCameraUpdated;
+
+    vector< pair<float, double> > mZposes;
+    float mLastPose;
+    float mLastRange;
+    double mLastStamp;
+
+    float mRangeScale;
 
     boost::mutex mMutexCamera;
 };
