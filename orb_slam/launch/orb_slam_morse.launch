@@ -7,5 +7,7 @@
     <node pkg="orb_slam" type="orb_slam" name="orb_slam"  args="Data/ORBvoc.txt Data/Settings_Morse.yaml" cwd="node" output="screen"
     ><!--launch-prefix="gdbserver localhost:10000"-->
         <remap from="/camera/image_raw" to="/robot/Kinect/rgb/image" />
+        <!-- Scale sensor in z axis (if any) -->
+        <remap from="/camera/range" to="/robot/sonar" />
     </node>
 </launch>
