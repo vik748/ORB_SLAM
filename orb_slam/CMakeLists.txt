@@ -12,11 +12,13 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   g2o
   message_generation
+  cmake_modules
 )
 
 #LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 #find_package(Cholmod REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(Eigen REQUIRED)
 find_package(PCL REQUIRED)
 find_package(octomap 1.6 REQUIRED)
 
@@ -38,7 +40,7 @@ generate_messages(
 
 catkin_package(
   CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs 
-  DEPENDS message_runtime std_msgs 
+  DEPENDS message_runtime std_msgs eigen
 )
 
 message(*************************)
@@ -50,6 +52,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIR}
+  ${Eigen_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${CHOLMOD_INCLUDE_DIR}
   ${PROJECT_SOURCE_DIR}
@@ -88,7 +91,6 @@ add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
 
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
-  ${EIGEN3_LIBS}
   ${OCTOMAP_LIBRARIES}
 #  cholmod
   DBoW2
