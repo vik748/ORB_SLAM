@@ -92,6 +92,9 @@ private:
 
   ros::NodeHandle nh;
 
+  double m_projectionMinHeight;
+  double m_octomapResolution;
+
   Map* mpMap;
 
   const char* MAP_FRAME_ID;

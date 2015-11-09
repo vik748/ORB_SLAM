@@ -31,7 +31,7 @@
 
 #define DEFAULT_OCTOMAP_RESOLUTION 0.1
 
-#define PROJECTION_MIN_HEIGHT 0.1
+#define PROJECTION_MIN_HEIGHT 0.01
 
 
 namespace ORB_SLAM
@@ -55,7 +55,7 @@ void OctoMapPublisher::reset(octomap::ColorOcTree& octoMap)
 bool OctoMapPublisher::octomapBinarySrv(octomap_msgs::GetOctomapRequest  &req,
                                         octomap_msgs::GetOctomapResponse &res)
 {
-  static octomap::ColorOcTree octoMap(DEFAULT_OCTOMAP_RESOLUTION);
+  static octomap::ColorOcTree octoMap(m_octomapResolution);
   refreshMap(octoMap);
   ros::WallTime startTime = ros::WallTime::now();
   ROS_INFO("Sending binary map data on service request");
@@ -73,7 +73,7 @@ bool OctoMapPublisher::octomapBinarySrv(octomap_msgs::GetOctomapRequest  &req,
 bool OctoMapPublisher::octomapFullSrv(octomap_msgs::GetOctomapRequest  &req,
                                       octomap_msgs::GetOctomapResponse &res)
 {
-  static octomap::ColorOcTree octoMap(DEFAULT_OCTOMAP_RESOLUTION);
+  static octomap::ColorOcTree octoMap(m_octomapResolution);
   refreshMap(octoMap);
   ROS_INFO("Sending full map data on service request");
   res.map.header.frame_id = MAP_FRAME_ID;
@@ -88,7 +88,7 @@ bool OctoMapPublisher::octomapFullSrv(octomap_msgs::GetOctomapRequest  &req,
 
 bool OctoMapPublisher::save(string filename)
 {
-  static octomap::ColorOcTree octoMap(DEFAULT_OCTOMAP_RESOLUTION);
+  static octomap::ColorOcTree octoMap(m_octomapResolution);
   refreshMap(octoMap);
 
   filename.append(".ot");
@@ -116,20 +116,23 @@ bool OctoMapPublisher::octomapSaveSrv(orb_slam::SaveOctomapRequest  &req,
 bool OctoMapPublisher::occupancySrv(nav_msgs::GetMapRequest  &req,
                                     nav_msgs::GetMapResponse &res)
 {
-  static octomap::ColorOcTree octoMap(DEFAULT_OCTOMAP_RESOLUTION);
+  static octomap::ColorOcTree octoMap(m_octomapResolution);
   refreshMap(octoMap);
   ROS_INFO("Sending full map data on service request");
   res.map.header.frame_id = MAP_FRAME_ID;
   res.map.header.stamp = ros::Time::now();
 
   //XXX no fixed limits
-  octomapToOccupancyGrid(octoMap, res.map, PROJECTION_MIN_HEIGHT, std::numeric_limits<double>::max());
+  octomapToOccupancyGrid(octoMap, res.map, m_projectionMinHeight, std::numeric_limits<double>::max());
 
   return true;
 }
 
 
-OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"), mpMap(pMap), MAP_FRAME_ID("/ORB_SLAM/World"), CAMERA_FRAME_ID("/ORB_SLAM/Camera") {
+OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"), m_projectionMinHeight(PROJECTION_MIN_HEIGHT), m_octomapResolution(DEFAULT_OCTOMAP_RESOLUTION), mpMap(pMap), MAP_FRAME_ID("/ORB_SLAM/World"), CAMERA_FRAME_ID("/ORB_SLAM/Camera") {
+
+  nh.param<double>("occupancy_projection_min_height", m_projectionMinHeight, m_projectionMinHeight);
+  nh.param<double>("octomap_resolution", m_octomapResolution, m_octomapResolution);
 
   //Configure Publisher
   publisherPCL = nh.advertise<sensor_msgs::PointCloud2>("point_cloud", 10);
@@ -144,7 +147,7 @@ OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"), mpMap(pMap), MAP_FRAME_ID
   m_occupancyService = nh.advertiseService("occupancy_grid", &OctoMapPublisher::occupancySrv, this);
 }
 
-void OctoMapPublisher::octomapToOccupancyGrid(const octomap::ColorOcTree& octree,nav_msgs::OccupancyGrid& map, const double minZ_, const double maxZ_ )
+void OctoMapPublisher::octomapToOccupancyGrid(const octomap::ColorOcTree& octree, nav_msgs::OccupancyGrid& map, const double minZ_, const double maxZ_ )
 {
   map.info.resolution = octree.getResolution();
   double minX, minY, minZ;
@@ -210,14 +213,13 @@ void OctoMapPublisher::publishProjectedMap()
   static nav_msgs::OccupancyGrid msgOccupancy;
   if (publisherProjected.getNumSubscribers() > 0)
   {
-    static octomap::ColorOcTree octoMap(DEFAULT_OCTOMAP_RESOLUTION);
+    static octomap::ColorOcTree octoMap(m_octomapResolution);
     ros::Time now = ros::Time::now();
     refreshMap(octoMap);
     msgOccupancy.header.frame_id = MAP_FRAME_ID;
     msgOccupancy.header.stamp = now;
 
-    //XXX no fixed limits
-    octomapToOccupancyGrid(octoMap, msgOccupancy, PROJECTION_MIN_HEIGHT, std::numeric_limits<double>::max());
+    octomapToOccupancyGrid(octoMap, msgOccupancy, m_projectionMinHeight, std::numeric_limits<double>::max());
 
     publisherProjected.publish(msgOccupancy);
 
@@ -252,7 +254,7 @@ void OctoMapPublisher::publishOctomap()
 {
   if (publisherOctomapBinary.getNumSubscribers() > 0 || publisherOctomapFull.getNumSubscribers() > 0)
   {
-    static octomap::ColorOcTree octoMap(DEFAULT_OCTOMAP_RESOLUTION);
+    static octomap::ColorOcTree octoMap(m_octomapResolution);
     ros::Time now = ros::Time::now();
     refreshMap(octoMap);
 
