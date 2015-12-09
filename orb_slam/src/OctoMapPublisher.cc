@@ -245,18 +245,12 @@ void OctoMapPublisher::publishPointCloud()
     pcl::PointCloud<pcl::PointXYZ> pclCloud;
     vector<MapPoint*> vMapPoints = mpMap->GetAllMapPoints();
     vector<MapPoint*> vRefMapPoints = mpMap->GetReferenceMapPoints();
-    mapPointsToPCL(vMapPoints, vRefMapPoints, pclCloud);
+    mapPointsToPCL(vRefMapPoints, pclCloud);
     pcl::toROSMsg(pclCloud, msgPointCloud);
     msgPointCloud.header.frame_id = CAMERA_FRAME_ID;
     msgPointCloud.header.stamp = ros::Time::now();
     msgPointCloud.header.seq++;
     publisherPCL.publish(msgPointCloud);
-
-    //TODO publish only on update (maybe save last update time (or index) in mpMap
-    //    if(mpMap->isMapUpdated())
-    //    {
-    //        mpMap->ResetUpdated();
-    //    }
   }
 }
 
@@ -348,20 +342,18 @@ void OctoMapPublisher::mapPointsToOctomap(const vector<MapPoint*> &vpMPs, octoma
   }
 }
 
-void OctoMapPublisher::mapPointsToPCL(const vector<MapPoint*> &vpMPs, const vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud)
+void OctoMapPublisher::mapPointsToPCL(const vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud)
 {
-  set<MapPoint*> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
-
-  for(size_t i=0, iend=vpMPs.size(); i<iend;i++)
+  //only current (local) mapping points are taking into account
+  for(size_t i=0, iend=vpRefMPs.size(); i<iend;i++)
   {
-    //this checks results in only current (local) mapping points are taking into account
-    if(vpMPs[i]->isBad() || spRefMPs.count(vpMPs[i]))
+    if(vpRefMPs[i]->isBad())
     {
         continue;
     }
-    cv::Mat pos = vpMPs[i]->GetWorldPos();
+    cv::Mat pos = vpRefMPs[i]->GetWorldPos();
 
-    pcl::PointXYZ point(pos.at<float>(0), pos.at<float>(1),pos.at<float>(2));
+    pcl::PointXYZ point(pos.at<float>(0), pos.at<float>(1), pos.at<float>(2));
     pclCloud.points.push_back(point);
   }
   pclCloud.height = 1; //unstructured cloud

@@ -66,7 +66,7 @@ private:
 
   void mapPointsToOctomap(const std::vector<MapPoint*> &vpMPs, octomap::ColorOcTree& m_octoMap);
 
-  void mapPointsToPCL(const std::vector<MapPoint*> &vpMPs, const std::vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud);
+  void mapPointsToPCL(const std::vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud);
 
   void octomapToOccupancyGrid(const octomap::ColorOcTree& octree, nav_msgs::OccupancyGrid& map){
     octomapToOccupancyGrid(octree, map, -1.0*std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
