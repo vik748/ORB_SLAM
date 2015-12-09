@@ -42,6 +42,7 @@ using namespace octomap;
 void OctoMapPublisher::reset(octomap::ColorOcTree& octoMap)
 {
   octoMap.clear();
+  mbLastMapUpdateIdx = mpMap->GetMapUpdateIdx() - 1; //decrease in order to force an update
 //  ParameterServer* ps = ParameterServer::instance();
 //  m_octoMap.setClampingThresMin(ps->get<double>("octomap_clamping_min"));
 //  m_octoMap.setClampingThresMax(ps->get<double>("octomap_clamping_max"));
@@ -129,10 +130,19 @@ bool OctoMapPublisher::occupancySrv(nav_msgs::GetMapRequest  &req,
 }
 
 
-OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"), m_projectionMinHeight(PROJECTION_MIN_HEIGHT), m_octomapResolution(DEFAULT_OCTOMAP_RESOLUTION), mpMap(pMap), MAP_FRAME_ID("/ORB_SLAM/World"), CAMERA_FRAME_ID("/ORB_SLAM/Camera") {
+OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"),
+    m_projectionMinHeight(PROJECTION_MIN_HEIGHT),
+    m_octomapResolution(DEFAULT_OCTOMAP_RESOLUTION),
+    mpMap(pMap),
+    mbLastMapUpdateIdx(0),
+    MAP_FRAME_ID("/ORB_SLAM/World"),
+    CAMERA_FRAME_ID("/ORB_SLAM/Camera")
+{
 
   nh.param<double>("occupancy_projection_min_height", m_projectionMinHeight, m_projectionMinHeight);
   nh.param<double>("octomap_resolution", m_octomapResolution, m_octomapResolution);
+
+  mbLastMapUpdateIdx = mpMap->GetMapUpdateIdx()-1; //decrease in order to force an update
 
   //Configure Publisher
   publisherPCL = nh.advertise<sensor_msgs::PointCloud2>("point_cloud", 10);
@@ -283,11 +293,18 @@ void OctoMapPublisher::publishOctomap()
 
 void OctoMapPublisher::Publish()
 {
+  //XXX think about special treatment
   publishPointCloud();
 
-  publishOctomap();
+  if(mpMap->isMapUpdated(mbLastMapUpdateIdx))
+  {
+    publishOctomap();
 
-  publishProjectedMap();
+    publishProjectedMap();
+
+    //reset update indicator
+    mbLastMapUpdateIdx = mpMap->GetMapUpdateIdx();
+  }
 }
 
 void OctoMapPublisher::refreshMap(octomap::ColorOcTree& octoMap)

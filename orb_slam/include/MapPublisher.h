@@ -67,6 +67,9 @@ private:
     cv::Mat mCameraPose;
     bool mbCameraUpdated;
 
+    //Store the last update counter that have been processed
+    unsigned int mbLastMapUpdateIdx;
+
     boost::mutex mMutexCamera;
 };
 

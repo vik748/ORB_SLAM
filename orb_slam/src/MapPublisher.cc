@@ -26,7 +26,7 @@ namespace ORB_SLAM
 {
 
 
-MapPublisher::MapPublisher(Map* pMap):mpMap(pMap), mbCameraUpdated(false)
+MapPublisher::MapPublisher(Map* pMap):mpMap(pMap), mbCameraUpdated(false), mbLastMapUpdateIdx(0)
 {
     const char* MAP_FRAME_ID = "/ORB_SLAM/World";
     const char* POINTS_NAMESPACE = "MapPoints";
@@ -106,6 +106,8 @@ MapPublisher::MapPublisher(Map* pMap):mpMap(pMap), mbCameraUpdated(false)
     mReferencePoints.color.r =1.0f;
     mReferencePoints.color.a = 1.0;
 
+    mbLastMapUpdateIdx = mpMap->GetMapUpdateIdx() - 1; //decrease in order to force an update
+
     //Configure Publisher
     publisher = nh.advertise<visualization_msgs::Marker>("ORB_SLAM/Map", 10);
 
@@ -127,7 +129,7 @@ void MapPublisher::Refresh()
        PublishCurrentCamera(Tcw);
        ResetCamFlag();
     }
-    if(mpMap->isMapUpdated())
+    if(mpMap->isMapUpdated(mbLastMapUpdateIdx))
     {
         vector<KeyFrame*> vKeyFrames = mpMap->GetAllKeyFrames();
         vector<MapPoint*> vMapPoints = mpMap->GetAllMapPoints();
@@ -136,7 +138,7 @@ void MapPublisher::Refresh()
         PublishMapPoints(vMapPoints, vRefMapPoints);
         PublishKeyFrames(vKeyFrames);
 
-        mpMap->ResetUpdated();
+        mbLastMapUpdateIdx = mpMap->GetMapUpdateIdx();
     }
   }
 }

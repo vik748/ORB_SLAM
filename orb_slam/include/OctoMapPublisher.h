@@ -97,6 +97,9 @@ private:
 
   Map* mpMap;
 
+  //Store the last update counter that have been processed
+  unsigned int mbLastMapUpdateIdx;
+
   const char* MAP_FRAME_ID;
   const char* CAMERA_FRAME_ID;
 

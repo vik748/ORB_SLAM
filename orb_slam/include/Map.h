@@ -58,8 +58,8 @@ public:
     int KeyFramesInMap();
 
     void SetFlagAfterBA();
-    bool isMapUpdated();
-    void ResetUpdated();
+    bool isMapUpdated(unsigned int refIdx);
+    unsigned int GetMapUpdateIdx();
 
     unsigned int GetMaxKFid();
 
@@ -74,7 +74,7 @@ protected:
     unsigned int mnMaxKFid;
 
     boost::mutex mMutexMap;
-    bool mbMapUpdated;
+    unsigned int mbMapUpdateIdx;
 };
 
 } //namespace ORB_SLAM

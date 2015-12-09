@@ -25,7 +25,7 @@ namespace ORB_SLAM
 
 Map::Map()
 {
-    mbMapUpdated= false;
+    mbMapUpdateIdx= false;
     mnMaxKFid = 0;
 }
 
@@ -35,35 +35,35 @@ void Map::AddKeyFrame(KeyFrame *pKF)
     mspKeyFrames.insert(pKF);
     if(pKF->mnId>mnMaxKFid)
         mnMaxKFid=pKF->mnId;
-    mbMapUpdated=true;
+    mbMapUpdateIdx++;
 }
 
 void Map::AddMapPoint(MapPoint *pMP)
 {
     boost::mutex::scoped_lock lock(mMutexMap);
     mspMapPoints.insert(pMP);
-    mbMapUpdated=true;
+    mbMapUpdateIdx++;
 }
 
 void Map::EraseMapPoint(MapPoint *pMP)
 {
     boost::mutex::scoped_lock lock(mMutexMap);
     mspMapPoints.erase(pMP);
-    mbMapUpdated=true;
+    mbMapUpdateIdx++;
 }
 
 void Map::EraseKeyFrame(KeyFrame *pKF)
 {
     boost::mutex::scoped_lock lock(mMutexMap);
     mspKeyFrames.erase(pKF);
-    mbMapUpdated=true;
+    mbMapUpdateIdx++;
 }
 
 void Map::SetReferenceMapPoints(const vector<MapPoint *> &vpMPs)
 {
     boost::mutex::scoped_lock lock(mMutexMap);
     mvpReferenceMapPoints = vpMPs;
-    mbMapUpdated=true;
+    mbMapUpdateIdx++;
 }
 
 vector<KeyFrame*> Map::GetAllKeyFrames()
@@ -96,23 +96,21 @@ vector<MapPoint*> Map::GetReferenceMapPoints()
     return mvpReferenceMapPoints;
 }
 
-bool Map::isMapUpdated()
+unsigned int Map::GetMapUpdateIdx()
 {
-    boost::mutex::scoped_lock lock(mMutexMap);
-    return mbMapUpdated;
+    return mbMapUpdateIdx;
+}
+
+bool Map::isMapUpdated(unsigned int refIdx)
+{
+    return mbMapUpdateIdx == refIdx;
 }
 
 void Map::SetFlagAfterBA()
 {
     boost::mutex::scoped_lock lock(mMutexMap);
-    mbMapUpdated=true;
+    mbMapUpdateIdx++;
 
-}
-
-void Map::ResetUpdated()
-{
-    boost::mutex::scoped_lock lock(mMutexMap);
-    mbMapUpdated=false;
 }
 
 unsigned int Map::GetMaxKFid()
