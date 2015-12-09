@@ -21,7 +21,7 @@ Camera.p1: 0
 Camera.p2: 0
 
 # Are the images already rectified? 0=no rectified, 1=rectified
-Camera.Rectified: 1
+Camera.Rectified: 0
 
 #--------------------------------------------------------------------------------------------
 ### Changing the parameters below could seriously degradate the performance of the system

@@ -1,13 +1,11 @@
 <launch>
 
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find orb_slam)/Data/rviz.rviz" output="log"></node>
+<!--     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find orb_slam)/Data/rviz.rviz" output="log"></node> -->
 
-	<node pkg="tf" type="static_transform_publisher" name="ORB_Camera_base_link_broadcaster" args="0 0 0 0.9238795325112867 0 0 0.3826834323650897 /ORB_SLAM/Camera /ORB_base_link 100" />
-
-    <node pkg="orb_slam" type="orb_slam" name="orb_slam"  args="Data/ORBvoc.txt Data/Settings_Morse.yaml" cwd="node" output="screen"
-    ><!--launch-prefix="gdbserver localhost:10000"-->
+    <node pkg="orb_slam" type="orb_slam" name="orb_slam"  args="Data/ORBvoc.txt Data/Settings_Morse_Videocam.yaml" cwd="node" output="screen"
+     ><!--launch-prefix="gdbserver localhost:10000"-->
     	<param name="occupancy_projection_min_height" value="-0.1"/>
     	<param name="octomap_resolution" value="0.1"/>
-        <remap from="/camera/image_raw" to="/robot/Kinect/rgb/image" />
+        <remap from="/camera/image_raw" to="/robot/videocamera/image" />
     </node>
 </launch>
