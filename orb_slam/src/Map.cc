@@ -93,7 +93,7 @@ int Map::KeyFramesInMap()
 vector<MapPoint*> Map::GetReferenceMapPoints()
 {
     boost::mutex::scoped_lock lock(mMutexMap);
-    return mvpReferenceMapPoints;
+    return vector<MapPoint*>(mvpReferenceMapPoints.begin(),mvpReferenceMapPoints.end());
 }
 
 unsigned int Map::GetMapUpdateIdx()
@@ -103,7 +103,7 @@ unsigned int Map::GetMapUpdateIdx()
 
 bool Map::isMapUpdated(unsigned int refIdx)
 {
-    return mbMapUpdateIdx == refIdx;
+    return mbMapUpdateIdx != refIdx;
 }
 
 void Map::SetFlagAfterBA()
