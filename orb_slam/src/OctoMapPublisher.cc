@@ -135,7 +135,7 @@ OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"),
     m_octomapResolution(DEFAULT_OCTOMAP_RESOLUTION),
     mpMap(pMap),
     mbLastMapUpdateIdx(0),
-    MAP_FRAME_ID("/ORB_SLAM/World"),
+    MAP_FRAME_ID("/orb_slam/map"),
     CAMERA_FRAME_ID("/ORB_SLAM/Camera")
 {
 
@@ -329,6 +329,7 @@ void OctoMapPublisher::mapPointsToOctomap(const vector<MapPoint*> &vpMPs, octoma
 
     tf::StampedTransform transform_in_target_frame;
 
+    //TODO add configuration for this
     m_tf_listener.lookupTransform("ORB_base_link", CAMERA_FRAME_ID, ros::Time(0) , transform_in_target_frame);
 
     octomap::pose6d frame = octomap::poseTfToOctomap(transform_in_target_frame);
