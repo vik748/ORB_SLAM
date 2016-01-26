@@ -226,7 +226,7 @@ bool LoopClosing::ComputeSim3()
     // If enough matches are found, we setup a Sim3Solver
     ORBmatcher matcher(0.75,true);
 
-    vector<Sim3Solver*> vpSim3Solvers;
+    vector<shared_ptr<Sim3Solver>> vpSim3Solvers;
     vpSim3Solvers.resize(nInitialCandidates);
 
     vector<vector<std::shared_ptr<MapPoint>> > vvpMapPointMatches;
@@ -259,7 +259,7 @@ bool LoopClosing::ComputeSim3()
         }
         else
         {
-            Sim3Solver* pSolver = new Sim3Solver(mpCurrentKF,pKF,vvpMapPointMatches[i]);
+            shared_ptr<Sim3Solver> pSolver(new Sim3Solver(mpCurrentKF,pKF,vvpMapPointMatches[i]));
             pSolver->SetRansacParameters(0.99,20,300);
             vpSim3Solvers[i] = pSolver;
         }
@@ -285,7 +285,7 @@ bool LoopClosing::ComputeSim3()
             int nInliers;
             bool bNoMore;
 
-            Sim3Solver* pSolver = vpSim3Solvers[i];
+            shared_ptr<Sim3Solver> pSolver = vpSim3Solvers[i];
             cv::Mat Scm  = pSolver->iterate(5,bNoMore,vbInliers,nInliers);
 
             // If Ransac reachs max. iterations discard keyframe
