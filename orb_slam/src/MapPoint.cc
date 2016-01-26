@@ -118,10 +118,10 @@ void MapPoint::SetBadFlag()
         pKF->EraseMapPointMatch(mit->second);
     }
 
-    mpMap->EraseMapPoint(this);
+    mpMap->EraseMapPoint(shared_from_this());
 }
 
-void MapPoint::Replace(MapPoint* pMP)
+void MapPoint::Replace(std::shared_ptr<MapPoint> pMP)
 {
     if(pMP->mnId==this->mnId)
         return;
@@ -153,7 +153,7 @@ void MapPoint::Replace(MapPoint* pMP)
 
     pMP->ComputeDistinctiveDescriptors();
 
-    mpMap->EraseMapPoint(this);
+    mpMap->EraseMapPoint(shared_from_this());
 
 }
 

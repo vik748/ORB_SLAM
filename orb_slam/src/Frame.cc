@@ -64,7 +64,7 @@ Frame::Frame(cv::Mat &im_, const double &timeStamp, ORBextractor* extractor, ORB
     if(mvKeys.empty())
         return;
 
-    mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
+    mvpMapPoints = vector<std::shared_ptr<MapPoint>>(N,static_cast<std::shared_ptr<MapPoint>>(NULL));
 
     UndistortKeyPoints();
 
@@ -134,7 +134,7 @@ void Frame::UpdatePoseMatrices()
     mOw = -mRcw.t()*mtcw;
 }
 
-bool Frame::isInFrustum(MapPoint *pMP, float viewingCosLimit)
+bool Frame::isInFrustum(std::shared_ptr<MapPoint> pMP, float viewingCosLimit)
 {
     pMP->mbTrackInView = false;
 

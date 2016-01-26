@@ -407,7 +407,7 @@ void Tracking::CreateInitialMap(cv::Mat &Rcw, cv::Mat &tcw)
         //Create MapPoint.
         cv::Mat worldPos(mvIniP3D[i]);
 
-        MapPoint* pMP = new MapPoint(worldPos,pKFcur,mpMap);
+        std::shared_ptr<MapPoint> pMP(new MapPoint(worldPos,pKFcur,mpMap));
 
         pKFini->AddMapPoint(pMP,i);
         pKFcur->AddMapPoint(pMP,mvIniMatches[i]);
@@ -452,12 +452,12 @@ void Tracking::CreateInitialMap(cv::Mat &Rcw, cv::Mat &tcw)
     pKFcur->SetPose(Tc2w);
 
     // Scale points
-    vector<MapPoint*> vpAllMapPoints = pKFini->GetMapPointMatches();
+    vector<std::shared_ptr<MapPoint>> vpAllMapPoints = pKFini->GetMapPointMatches();
     for(size_t iMP=0; iMP<vpAllMapPoints.size(); iMP++)
     {
         if(vpAllMapPoints[iMP])
         {
-            MapPoint* pMP = vpAllMapPoints[iMP];
+            std::shared_ptr<MapPoint> pMP = vpAllMapPoints[iMP];
             pMP->SetWorldPos(pMP->GetWorldPos()*invMedianDepth);
         }
     }
@@ -486,7 +486,7 @@ void Tracking::CreateInitialMap(cv::Mat &Rcw, cv::Mat &tcw)
 bool Tracking::TrackPreviousFrame()
 {
     ORBmatcher matcher(0.9,true);
-    vector<MapPoint*> vpMapPointMatches;
+    vector<shared_ptr<MapPoint>> vpMapPointMatches;
 
     // Search first points at coarse scale levels to get a rough initial estimate
     int minOctave = 0;
@@ -502,7 +502,7 @@ bool Tracking::TrackPreviousFrame()
         nmatches = matcher.WindowSearch(mLastFrame,mCurrentFrame,100,vpMapPointMatches,0);
         if(nmatches<10)
         {
-            vpMapPointMatches=vector<MapPoint*>(mCurrentFrame.mvpMapPoints.size(),static_cast<MapPoint*>(NULL));
+            vpMapPointMatches=vector<std::shared_ptr<MapPoint>>(mCurrentFrame.mvpMapPoints.size(),static_cast<std::shared_ptr<MapPoint>>(NULL));
             nmatches=0;
         }
     }
@@ -554,12 +554,12 @@ bool Tracking::TrackPreviousFrame()
 bool Tracking::TrackWithMotionModel()
 {
     ORBmatcher matcher(0.9,true);
-    vector<MapPoint*> vpMapPointMatches;
+    vector<std::shared_ptr<MapPoint>> vpMapPointMatches;
 
     // Compute current pose by motion model
     mCurrentFrame.mTcw = mVelocity*mLastFrame.mTcw;
 
-    fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
+    fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<std::shared_ptr<MapPoint>>(NULL));
 
     // Project points seen in previous frame
     int nmatches = matcher.SearchByProjection(mCurrentFrame,mLastFrame,15);
@@ -675,9 +675,9 @@ void Tracking::CreateNewKeyFrame()
 void Tracking::SearchReferencePointsInFrustum()
 {
     // Do not search map points already matched
-    for(vector<MapPoint*>::iterator vit=mCurrentFrame.mvpMapPoints.begin(), vend=mCurrentFrame.mvpMapPoints.end(); vit!=vend; vit++)
+    for(vector<std::shared_ptr<MapPoint>>::iterator vit=mCurrentFrame.mvpMapPoints.begin(), vend=mCurrentFrame.mvpMapPoints.end(); vit!=vend; vit++)
     {
-        MapPoint* pMP = *vit;
+        std::shared_ptr<MapPoint> pMP = *vit;
         if(pMP)
         {
             if(pMP->isBad())
@@ -698,9 +698,9 @@ void Tracking::SearchReferencePointsInFrustum()
     int nToMatch=0;
 
     // Project points in frame and check its visibility
-    for(vector<MapPoint*>::iterator vit=mvpLocalMapPoints.begin(), vend=mvpLocalMapPoints.end(); vit!=vend; vit++)
+    for(vector<std::shared_ptr<MapPoint>>::iterator vit=mvpLocalMapPoints.begin(), vend=mvpLocalMapPoints.end(); vit!=vend; vit++)
     {
-        MapPoint* pMP = *vit;
+        std::shared_ptr<MapPoint> pMP = *vit;
         if(pMP->mnLastFrameSeen == mCurrentFrame.mnId)
             continue;
         if(pMP->isBad())
@@ -742,11 +742,11 @@ void Tracking::UpdateReferencePoints()
     for(vector<KeyFrame*>::iterator itKF=mvpLocalKeyFrames.begin(), itEndKF=mvpLocalKeyFrames.end(); itKF!=itEndKF; itKF++)
     {
         KeyFrame* pKF = *itKF;
-        vector<MapPoint*> vpMPs = pKF->GetMapPointMatches();
+        vector<std::shared_ptr<MapPoint>> vpMPs = pKF->GetMapPointMatches();
 
-        for(vector<MapPoint*>::iterator itMP=vpMPs.begin(), itEndMP=vpMPs.end(); itMP!=itEndMP; itMP++)
+        for(vector<std::shared_ptr<MapPoint>>::iterator itMP=vpMPs.begin(), itEndMP=vpMPs.end(); itMP!=itEndMP; itMP++)
         {
-            MapPoint* pMP = *itMP;
+            std::shared_ptr<MapPoint> pMP = *itMP;
             if(!pMP)
                 continue;
             if(pMP->mnTrackReferenceForFrame==mCurrentFrame.mnId)
@@ -769,7 +769,7 @@ void Tracking::UpdateReferenceKeyFrames()
     {
         if(mCurrentFrame.mvpMapPoints[i])
         {
-            MapPoint* pMP = mCurrentFrame.mvpMapPoints[i];
+            std::shared_ptr<MapPoint> pMP = mCurrentFrame.mvpMapPoints[i];
             if(!pMP->isBad())
             {
                 map<KeyFrame*,size_t> observations = pMP->GetObservations();
@@ -869,7 +869,7 @@ bool Tracking::Relocalisation()
     vector<PnPsolver*> vpPnPsolvers;
     vpPnPsolvers.resize(nKFs);
 
-    vector<vector<MapPoint*> > vvpMapPointMatches;
+    vector<vector<std::shared_ptr<MapPoint>> > vvpMapPointMatches;
     vvpMapPointMatches.resize(nKFs);
 
     vector<bool> vbDiscarded;
@@ -932,7 +932,7 @@ bool Tracking::Relocalisation()
             {
                 Tcw.copyTo(mCurrentFrame.mTcw);
 
-                set<MapPoint*> sFound;
+                set<std::shared_ptr<MapPoint>> sFound;
 
                 for(size_t j=0; j<vbInliers.size(); j++)
                 {

@@ -21,6 +21,8 @@
 #ifndef MAPPUBLISHER_H
 #define MAPPUBLISHER_H
 
+#include<memory>
+
 #include<ros/ros.h>
 #include <visualization_msgs/Marker.h>
 
@@ -39,7 +41,7 @@ public:
     Map* mpMap;
 
     void Refresh();
-    void PublishMapPoints(const std::vector<MapPoint*> &vpMPs, const std::vector<MapPoint*> &vpRefMPs);
+    void PublishMapPoints(const std::vector<std::shared_ptr<MapPoint>> &vpMPs, const std::vector<std::shared_ptr<MapPoint>> &vpRefMPs);
     void PublishKeyFrames(const std::vector<KeyFrame*> &vpKFs);
     void PublishCurrentCamera(const cv::Mat &Tcw);
     void SetCurrentCameraPose(const cv::Mat &Tcw);

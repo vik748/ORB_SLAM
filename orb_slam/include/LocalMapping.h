@@ -21,6 +21,8 @@
 #ifndef LOCALMAPPING_H
 #define LOCALMAPPING_H
 
+#include <memory>
+
 #include "KeyFrame.h"
 #include "Map.h"
 #include "LoopClosing.h"
@@ -94,7 +96,7 @@ protected:
 
     KeyFrame* mpCurrentKeyFrame;
 
-    std::list<MapPoint*> mlpRecentAddedMapPoints;
+    std::list<std::shared_ptr<MapPoint>> mlpRecentAddedMapPoints;
 
     boost::mutex mMutexNewKFs;    
 

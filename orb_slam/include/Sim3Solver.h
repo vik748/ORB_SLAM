@@ -35,7 +35,7 @@ class Sim3Solver
 {
 public:
 
-    Sim3Solver(KeyFrame* pKF1, KeyFrame* pKF2, const std::vector<MapPoint*> &vpMatched12);
+    Sim3Solver(KeyFrame* pKF1, KeyFrame* pKF2, const std::vector<std::shared_ptr<MapPoint>> &vpMatched12);
 
     void SetRansacParameters(double probability = 0.99, int minInliers = 6 , int maxIterations = 300);
 
@@ -70,9 +70,9 @@ protected:
 
     std::vector<cv::Mat> mvX3Dc1;
     std::vector<cv::Mat> mvX3Dc2;
-    std::vector<MapPoint*> mvpMapPoints1;
-    std::vector<MapPoint*> mvpMapPoints2;
-    std::vector<MapPoint*> mvpMatches12;
+    std::vector<std::shared_ptr<MapPoint>> mvpMapPoints1;
+    std::vector<std::shared_ptr<MapPoint>> mvpMapPoints2;
+    std::vector<std::shared_ptr<MapPoint>> mvpMatches12;
     std::vector<size_t> mvnIndices1;
     std::vector<size_t> mvSigmaSquare1;
     std::vector<size_t> mvSigmaSquare2;

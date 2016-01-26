@@ -21,6 +21,8 @@
 #ifndef MAPPOINT_H
 #define MAPPOINT_H
 
+#include <memory>
+
 #include<opencv2/core/core.hpp>
 #include"KeyFrame.h"
 #include"Map.h"
@@ -36,7 +38,7 @@ class KeyFrame;
 class Map;
 
 
-class MapPoint
+class MapPoint : public std::enable_shared_from_this<MapPoint>
 {
 public:
     MapPoint(const cv::Mat &Pos, KeyFrame* pRefKF, Map* pMap);
@@ -59,7 +61,7 @@ public:
     void SetBadFlag();
     bool isBad();
 
-    void Replace(MapPoint* pMP);
+    void Replace(std::shared_ptr<MapPoint> pMP);
 
     void IncreaseVisible();
     void IncreaseFound();

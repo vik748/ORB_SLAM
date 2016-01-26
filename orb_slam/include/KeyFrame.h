@@ -30,6 +30,7 @@
 #include "KeyFrameDatabase.h"
 
 #include<boost/thread.hpp>
+#include<memory>
 
 
 namespace ORB_SLAM
@@ -88,14 +89,14 @@ public:
     std::set<KeyFrame*> GetLoopEdges();
 
     // MapPoint observation functions
-    void AddMapPoint(MapPoint* pMP, const size_t &idx);
+    void AddMapPoint(std::shared_ptr<MapPoint> pMP, const size_t &idx);
     void EraseMapPointMatch(const size_t &idx);
-    void EraseMapPointMatch(MapPoint* pMP);
-    void ReplaceMapPointMatch(const size_t &idx, MapPoint* pMP);
-    std::set<MapPoint*> GetMapPoints();
-    std::vector<MapPoint*> GetMapPointMatches();
+    void EraseMapPointMatch(std::shared_ptr<MapPoint> pMP);
+    void ReplaceMapPointMatch(const size_t &idx, std::shared_ptr<MapPoint> pMP);
+    std::set<std::shared_ptr<MapPoint>> GetMapPoints();
+    std::vector<std::shared_ptr<MapPoint>> GetMapPointMatches();
     int TrackedMapPoints();
-    MapPoint* GetMapPoint(const size_t &idx);
+    std::shared_ptr<MapPoint> GetMapPoint(const size_t &idx);
 
     // KeyPoint functions
     cv::KeyPoint GetKeyPointUn(const size_t &idx) const;
@@ -197,7 +198,7 @@ protected:
     std::vector<cv::KeyPoint> mvKeys;
     std::vector<cv::KeyPoint> mvKeysUn;
     cv::Mat mDescriptors;
-    std::vector<MapPoint*> mvpMapPoints;
+    std::vector<std::shared_ptr<MapPoint>> mvpMapPoints;
 
     // BoW
     KeyFrameDatabase* mpKeyFrameDB;

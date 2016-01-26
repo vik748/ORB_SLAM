@@ -243,8 +243,8 @@ void OctoMapPublisher::publishPointCloud()
   if (publisherPCL.getNumSubscribers() > 0)
   {
     pcl::PointCloud<pcl::PointXYZ> pclCloud;
-    vector<MapPoint*> vMapPoints = mpMap->GetAllMapPoints();
-    vector<MapPoint*> vRefMapPoints = mpMap->GetReferenceMapPoints();
+    vector<std::shared_ptr<MapPoint>> vMapPoints = mpMap->GetAllMapPoints();
+    vector<std::shared_ptr<MapPoint>> vRefMapPoints = mpMap->GetReferenceMapPoints();
     mapPointsToPCL(vRefMapPoints, pclCloud);
     pcl::toROSMsg(pclCloud, msgPointCloud);
     msgPointCloud.header.frame_id = CAMERA_FRAME_ID;
@@ -304,12 +304,12 @@ void OctoMapPublisher::Publish()
 void OctoMapPublisher::refreshMap(octomap::ColorOcTree& octoMap)
 {
   reset(octoMap);
-  vector<MapPoint*> vMapPoints = mpMap->GetAllMapPoints();
+  vector<std::shared_ptr<MapPoint>> vMapPoints = mpMap->GetAllMapPoints();
 
   mapPointsToOctomap(vMapPoints, octoMap);
 }
 
-void OctoMapPublisher::mapPointsToOctomap(const vector<MapPoint*> &vpMPs, octomap::ColorOcTree& octoMap)
+void OctoMapPublisher::mapPointsToOctomap(const vector<std::shared_ptr<MapPoint>> &vpMPs, octomap::ColorOcTree& octoMap)
 {
   Pointcloud pointCloud;
 
@@ -343,7 +343,7 @@ void OctoMapPublisher::mapPointsToOctomap(const vector<MapPoint*> &vpMPs, octoma
   }
 }
 
-void OctoMapPublisher::mapPointsToPCL(const vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud)
+void OctoMapPublisher::mapPointsToPCL(const vector<std::shared_ptr<MapPoint>> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud)
 {
   //only current (local) mapping points are taking into account
   for(size_t i=0, iend=vpRefMPs.size(); i<iend;i++)

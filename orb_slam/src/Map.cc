@@ -38,14 +38,14 @@ void Map::AddKeyFrame(KeyFrame *pKF)
     mbMapUpdateIdx++;
 }
 
-void Map::AddMapPoint(MapPoint *pMP)
+void Map::AddMapPoint(std::shared_ptr<MapPoint> pMP)
 {
     boost::mutex::scoped_lock lock(mMutexMap);
     mspMapPoints.insert(pMP);
     mbMapUpdateIdx++;
 }
 
-void Map::EraseMapPoint(MapPoint *pMP)
+void Map::EraseMapPoint(std::shared_ptr<MapPoint> pMP)
 {
     boost::mutex::scoped_lock lock(mMutexMap);
     mspMapPoints.erase(pMP);
@@ -59,7 +59,7 @@ void Map::EraseKeyFrame(KeyFrame *pKF)
     mbMapUpdateIdx++;
 }
 
-void Map::SetReferenceMapPoints(const vector<MapPoint *> &vpMPs)
+void Map::SetReferenceMapPoints(const vector<std::shared_ptr<MapPoint>> &vpMPs)
 {
     boost::mutex::scoped_lock lock(mMutexMap);
     mvpReferenceMapPoints = vpMPs;
@@ -72,10 +72,10 @@ vector<KeyFrame*> Map::GetAllKeyFrames()
     return vector<KeyFrame*>(mspKeyFrames.begin(),mspKeyFrames.end());
 }
 
-vector<MapPoint*> Map::GetAllMapPoints()
+vector<std::shared_ptr<MapPoint>> Map::GetAllMapPoints()
 {
     boost::mutex::scoped_lock lock(mMutexMap);
-    return vector<MapPoint*>(mspMapPoints.begin(),mspMapPoints.end());
+    return vector<std::shared_ptr<MapPoint>>(mspMapPoints.begin(),mspMapPoints.end());
 }
 
 int Map::MapPointsInMap()
@@ -90,10 +90,10 @@ int Map::KeyFramesInMap()
     return mspKeyFrames.size();
 }
 
-vector<MapPoint*> Map::GetReferenceMapPoints()
+vector<std::shared_ptr<MapPoint>> Map::GetReferenceMapPoints()
 {
     boost::mutex::scoped_lock lock(mMutexMap);
-    return vector<MapPoint*>(mvpReferenceMapPoints.begin(),mvpReferenceMapPoints.end());
+    return vector<std::shared_ptr<MapPoint>>(mvpReferenceMapPoints.begin(),mvpReferenceMapPoints.end());
 }
 
 unsigned int Map::GetMapUpdateIdx()
@@ -121,9 +121,6 @@ unsigned int Map::GetMaxKFid()
 
 void Map::clear()
 {
-    for(set<MapPoint*>::iterator sit=mspMapPoints.begin(), send=mspMapPoints.end(); sit!=send; sit++)
-        delete *sit;
-
     for(set<KeyFrame*>::iterator sit=mspKeyFrames.begin(), send=mspKeyFrames.end(); sit!=send; sit++)
         delete *sit;
 

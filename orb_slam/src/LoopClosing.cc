@@ -229,7 +229,7 @@ bool LoopClosing::ComputeSim3()
     vector<Sim3Solver*> vpSim3Solvers;
     vpSim3Solvers.resize(nInitialCandidates);
 
-    vector<vector<MapPoint*> > vvpMapPointMatches;
+    vector<vector<std::shared_ptr<MapPoint>> > vvpMapPointMatches;
     vvpMapPointMatches.resize(nInitialCandidates);
 
     vector<bool> vbDiscarded;
@@ -298,7 +298,7 @@ bool LoopClosing::ComputeSim3()
             // If RANSAC returns a Sim3, perform a guided matching and optimize with all correspondences
             if(!Scm.empty())
             {
-                vector<MapPoint*> vpMapPointMatches(vvpMapPointMatches[i].size(), static_cast<MapPoint*>(NULL));
+                vector<std::shared_ptr<MapPoint>> vpMapPointMatches(vvpMapPointMatches[i].size(), static_cast<std::shared_ptr<MapPoint>>(NULL));
                 for(size_t j=0, jend=vbInliers.size(); j<jend; j++)
                 {
                     if(vbInliers[j])
@@ -345,10 +345,10 @@ bool LoopClosing::ComputeSim3()
     for(vector<KeyFrame*>::iterator vit=vpLoopConnectedKFs.begin(); vit!=vpLoopConnectedKFs.end(); vit++)
     {
         KeyFrame* pKF = *vit;
-        vector<MapPoint*> vpMapPoints = pKF->GetMapPointMatches();
+        vector<std::shared_ptr<MapPoint>> vpMapPoints = pKF->GetMapPointMatches();
         for(size_t i=0, iend=vpMapPoints.size(); i<iend; i++)
         {
-            MapPoint* pMP = vpMapPoints[i];
+            std::shared_ptr<MapPoint> pMP = vpMapPoints[i];
             if(pMP)
             {
                 if(!pMP->isBad() && pMP->mnLoopPointForKF!=mpCurrentKF->mnId)
@@ -446,10 +446,10 @@ void LoopClosing::CorrectLoop()
 
         g2o::Sim3 g2oSiw =NonCorrectedSim3[pKFi];
 
-        vector<MapPoint*> vpMPsi = pKFi->GetMapPointMatches();
+        vector<std::shared_ptr<MapPoint>> vpMPsi = pKFi->GetMapPointMatches();
         for(size_t iMP=0, endMPi = vpMPsi.size(); iMP<endMPi; iMP++)
         {
-            MapPoint* pMPi = vpMPsi[iMP];
+            std::shared_ptr<MapPoint> pMPi = vpMPsi[iMP];
             if(!pMPi)
                 continue;
             if(pMPi->isBad())
@@ -490,8 +490,8 @@ void LoopClosing::CorrectLoop()
     {
         if(mvpCurrentMatchedPoints[i])
         {
-            MapPoint* pLoopMP = mvpCurrentMatchedPoints[i];
-            MapPoint* pCurMP = mpCurrentKF->GetMapPoint(i);
+            std::shared_ptr<MapPoint> pLoopMP = mvpCurrentMatchedPoints[i];
+            std::shared_ptr<MapPoint> pCurMP = mpCurrentKF->GetMapPoint(i);
             if(pCurMP)
                 pCurMP->Replace(pLoopMP);
             else

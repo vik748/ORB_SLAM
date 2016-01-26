@@ -21,6 +21,8 @@
 #ifndef OCTOMAPPUBLISHER_H
 #define OCTOMAPPUBLISHER_H
 
+#include <memory>
+
 #include<ros/ros.h>
 
 #include <octomap/ColorOcTree.h>
@@ -64,9 +66,9 @@ private:
 
   void reset(octomap::ColorOcTree& octoMap);
 
-  void mapPointsToOctomap(const std::vector<MapPoint*> &vpMPs, octomap::ColorOcTree& m_octoMap);
+  void mapPointsToOctomap(const std::vector<std::shared_ptr<MapPoint>> &vpMPs, octomap::ColorOcTree& m_octoMap);
 
-  void mapPointsToPCL(const std::vector<MapPoint*> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud);
+  void mapPointsToPCL(const std::vector<std::shared_ptr<MapPoint>> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud);
 
   void octomapToOccupancyGrid(const octomap::ColorOcTree& octree, nav_msgs::OccupancyGrid& map){
     octomapToOccupancyGrid(octree, map, -1.0*std::numeric_limits<double>::max(), std::numeric_limits<double>::max());

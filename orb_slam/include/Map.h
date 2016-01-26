@@ -26,6 +26,7 @@
 #include<set>
 
 #include<boost/thread.hpp>
+#include <memory>
 
 
 
@@ -41,18 +42,18 @@ public:
     Map();
 
     void AddKeyFrame(KeyFrame* pKF);
-    void AddMapPoint(MapPoint* pMP);
-    void EraseMapPoint(MapPoint* pMP);
+    void AddMapPoint(std::shared_ptr<MapPoint> pMP);
+    void EraseMapPoint(std::shared_ptr<MapPoint> pMP);
     void EraseKeyFrame(KeyFrame* pKF);
     void SetCurrentCameraPose(cv::Mat Tcw);
     void SetReferenceKeyFrames(const std::vector<KeyFrame*> &vpKFs);
-    void SetReferenceMapPoints(const std::vector<MapPoint*> &vpMPs);
+    void SetReferenceMapPoints(const std::vector<std::shared_ptr<MapPoint>> &vpMPs);
 
     std::vector<KeyFrame*> GetAllKeyFrames();
-    std::vector<MapPoint*> GetAllMapPoints();
+    std::vector<std::shared_ptr<MapPoint>> GetAllMapPoints();
     cv::Mat GetCameraPose();
     std::vector<KeyFrame*> GetReferenceKeyFrames();
-    std::vector<MapPoint*> GetReferenceMapPoints();
+    std::vector<std::shared_ptr<MapPoint>> GetReferenceMapPoints();
 
     int MapPointsInMap();
     int KeyFramesInMap();
@@ -66,10 +67,10 @@ public:
     void clear();
 
 protected:
-    std::set<MapPoint*> mspMapPoints;
+    std::set<std::shared_ptr<MapPoint>> mspMapPoints;
     std::set<KeyFrame*> mspKeyFrames;
 
-    std::vector<MapPoint*> mvpReferenceMapPoints;
+    std::vector<std::shared_ptr<MapPoint>> mvpReferenceMapPoints;
 
     unsigned int mnMaxKFid;
 

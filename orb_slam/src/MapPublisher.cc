@@ -132,8 +132,8 @@ void MapPublisher::Refresh()
     if(mpMap->isMapUpdated(mbLastMapUpdateIdx))
     {
         vector<KeyFrame*> vKeyFrames = mpMap->GetAllKeyFrames();
-        vector<MapPoint*> vMapPoints = mpMap->GetAllMapPoints();
-        vector<MapPoint*> vRefMapPoints = mpMap->GetReferenceMapPoints();
+        vector<std::shared_ptr<MapPoint>> vMapPoints = mpMap->GetAllMapPoints();
+        vector<std::shared_ptr<MapPoint>> vRefMapPoints = mpMap->GetReferenceMapPoints();
 
         PublishMapPoints(vMapPoints, vRefMapPoints);
         PublishKeyFrames(vKeyFrames);
@@ -143,12 +143,12 @@ void MapPublisher::Refresh()
   }
 }
 
-void MapPublisher::PublishMapPoints(const vector<MapPoint*> &vpMPs, const vector<MapPoint*> &vpRefMPs)
+void MapPublisher::PublishMapPoints(const vector<std::shared_ptr<MapPoint>> &vpMPs, const vector<std::shared_ptr<MapPoint>> &vpRefMPs)
 {
     mPoints.points.clear();
     mReferencePoints.points.clear();
 
-    set<MapPoint*> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
+    set<std::shared_ptr<MapPoint>> spRefMPs(vpRefMPs.begin(), vpRefMPs.end());
 
     for(size_t i=0, iend=vpMPs.size(); i<iend;i++)
     {
@@ -163,7 +163,7 @@ void MapPublisher::PublishMapPoints(const vector<MapPoint*> &vpMPs, const vector
         mPoints.points.push_back(p);
     }
 
-    for(set<MapPoint*>::iterator sit=spRefMPs.begin(), send=spRefMPs.end(); sit!=send; sit++)
+    for(set<std::shared_ptr<MapPoint>>::iterator sit=spRefMPs.begin(), send=spRefMPs.end(); sit!=send; sit++)
     {
         if((*sit)->isBad())
             continue;

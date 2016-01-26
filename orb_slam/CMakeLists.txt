@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
+ADD_DEFINITIONS("-std=c++11")
+
 #LIST(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
 #find_package(Cholmod REQUIRED)
 find_package(Eigen3 REQUIRED)

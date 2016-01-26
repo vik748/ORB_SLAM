@@ -210,7 +210,7 @@ int KeyFrame::GetWeight(KeyFrame *pKF)
         return 0;
 }
 
-void KeyFrame::AddMapPoint(MapPoint *pMP, const size_t &idx)
+void KeyFrame::AddMapPoint(std::shared_ptr<MapPoint> pMP, const size_t &idx)
 {
     boost::mutex::scoped_lock lock(mMutexFeatures);
     mvpMapPoints[idx]=pMP;
@@ -222,7 +222,7 @@ void KeyFrame::EraseMapPointMatch(const size_t &idx)
     mvpMapPoints[idx]=NULL;
 }
 
-void KeyFrame::EraseMapPointMatch(MapPoint* pMP)
+void KeyFrame::EraseMapPointMatch(std::shared_ptr<MapPoint> pMP)
 {
     int idx = pMP->GetIndexInKeyFrame(this);
     if(idx>=0)
@@ -230,20 +230,20 @@ void KeyFrame::EraseMapPointMatch(MapPoint* pMP)
 }
 
 
-void KeyFrame::ReplaceMapPointMatch(const size_t &idx, MapPoint* pMP)
+void KeyFrame::ReplaceMapPointMatch(const size_t &idx, std::shared_ptr<MapPoint> pMP)
 {
     mvpMapPoints[idx]=pMP;
 }
 
-set<MapPoint*> KeyFrame::GetMapPoints()
+set<std::shared_ptr<MapPoint>> KeyFrame::GetMapPoints()
 {
     boost::mutex::scoped_lock lock(mMutexFeatures);
-    set<MapPoint*> s;
+    set<std::shared_ptr<MapPoint>> s;
     for(size_t i=0, iend=mvpMapPoints.size(); i<iend; i++)
     {
         if(!mvpMapPoints[i])
             continue;
-        MapPoint* pMP = mvpMapPoints[i];
+        std::shared_ptr<MapPoint> pMP = mvpMapPoints[i];
         if(!pMP->isBad())
             s.insert(pMP);
     }
@@ -264,13 +264,13 @@ int KeyFrame::TrackedMapPoints()
     return nPoints;
 }
 
-vector<MapPoint*> KeyFrame::GetMapPointMatches()
+vector<std::shared_ptr<MapPoint>> KeyFrame::GetMapPointMatches()
 {
     boost::mutex::scoped_lock lock(mMutexFeatures);
     return mvpMapPoints;
 }
 
-MapPoint* KeyFrame::GetMapPoint(const size_t &idx)
+std::shared_ptr<MapPoint> KeyFrame::GetMapPoint(const size_t &idx)
 {
     boost::mutex::scoped_lock lock(mMutexFeatures);
     return mvpMapPoints[idx];
@@ -333,7 +333,7 @@ void KeyFrame::UpdateConnections()
 {
     map<KeyFrame*,int> KFcounter;
 
-    vector<MapPoint*> vpMP;
+    vector<std::shared_ptr<MapPoint>> vpMP;
 
     {
         boost::mutex::scoped_lock lockMPs(mMutexFeatures);
@@ -342,9 +342,9 @@ void KeyFrame::UpdateConnections()
 
     //For all map points in keyframe check in which other keyframes are they seen
     //Increase counter for those keyframes
-    for(vector<MapPoint*>::iterator vit=vpMP.begin(), vend=vpMP.end(); vit!=vend; vit++)
+    for(vector<std::shared_ptr<MapPoint>>::iterator vit=vpMP.begin(), vend=vpMP.end(); vit!=vend; vit++)
     {
-        MapPoint* pMP = *vit;
+        std::shared_ptr<MapPoint> pMP = *vit;
 
         if(!pMP)
             continue;
@@ -658,7 +658,7 @@ bool KeyFrame::IsInImage(const float &x, const float &y) const
 
 float KeyFrame::ComputeSceneMedianDepth(int q)
 {
-    vector<MapPoint*> vpMapPoints;
+    vector<std::shared_ptr<MapPoint>> vpMapPoints;
     cv::Mat Tcw_;
     {
     boost::mutex::scoped_lock lock(mMutexFeatures);
@@ -676,7 +676,7 @@ float KeyFrame::ComputeSceneMedianDepth(int q)
     {
         if(mvpMapPoints[i])
         {
-            MapPoint* pMP = mvpMapPoints[i];
+            std::shared_ptr<MapPoint> pMP = mvpMapPoints[i];
             cv::Mat x3Dw = pMP->GetWorldPos();
             float z = Rcw2.dot(x3Dw)+zcw;
             vDepths.push_back(z);

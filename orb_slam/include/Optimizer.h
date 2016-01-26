@@ -21,6 +21,8 @@
 #ifndef OPTIMIZER_H
 #define OPTIMIZER_H
 
+#include <memory>
+
 #include "Map.h"
 #include "MapPoint.h"
 #include "KeyFrame.h"
@@ -37,7 +39,7 @@ class LoopClosing;
 class Optimizer
 {
 public:
-    void static BundleAdjustment(const std::vector<KeyFrame*> &vpKF, const std::vector<MapPoint*> &vpMP, int nIterations = 5, bool *pbStopFlag=NULL);
+    void static BundleAdjustment(const std::vector<KeyFrame*> &vpKF, const std::vector<std::shared_ptr<MapPoint>> &vpMP, int nIterations = 5, bool *pbStopFlag=NULL);
     void static GlobalBundleAdjustemnt(Map* pMap, int nIterations=5, bool *pbStopFlag=NULL);
     void static LocalBundleAdjustment(KeyFrame* pKF, bool *pbStopFlag=NULL);
     int static PoseOptimization(Frame* pFrame);
@@ -48,7 +50,7 @@ public:
                                        std::map<KeyFrame*, set<KeyFrame*> > &LoopConnections);
 
 
-    static int OptimizeSim3(KeyFrame* pKF1, KeyFrame* pKF2, std::vector<MapPoint *> &vpMatches1, g2o::Sim3 &g2oS12, float th2 = 10);
+    static int OptimizeSim3(KeyFrame* pKF1, KeyFrame* pKF2, std::vector<std::shared_ptr<MapPoint>> &vpMatches1, g2o::Sim3 &g2oS12, float th2 = 10);
 };
 
 } //namespace ORB_SLAM

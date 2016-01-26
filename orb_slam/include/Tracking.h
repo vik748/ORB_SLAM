@@ -133,7 +133,7 @@ protected:
     //Local Map
     KeyFrame* mpReferenceKF;
     std::vector<KeyFrame*> mvpLocalKeyFrames;
-    std::vector<MapPoint*> mvpLocalMapPoints;
+    std::vector<std::shared_ptr<MapPoint>> mvpLocalMapPoints;
 
     //Publishers
     FramePublisher* mpFramePublisher;

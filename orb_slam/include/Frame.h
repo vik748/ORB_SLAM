@@ -21,6 +21,8 @@
 #ifndef FRAME_H
 #define FRAME_H
 
+#include <memory>
+
 #include "MapPoint.h"
 #include "Thirdparty/DBoW2/DBoW2/BowVector.h"
 #include "Thirdparty/DBoW2/DBoW2/FeatureVector.h"
@@ -79,7 +81,7 @@ public:
     cv::Mat mDescriptors;
 
     // MapPoints associated to keypoints, NULL pointer if not association
-    std::vector<MapPoint*> mvpMapPoints;
+    std::vector<std::shared_ptr<MapPoint>> mvpMapPoints;
 
     // Flag to identify outlier associations
     std::vector<bool> mvbOutlier;
@@ -103,7 +105,7 @@ public:
     void UpdatePoseMatrices();
 
     // Check if a MapPoint is in the frustum of the camera and also fills variables of the MapPoint to be used by the tracking
-    bool isInFrustum(MapPoint* pMP, float viewingCosLimit);
+    bool isInFrustum(std::shared_ptr<MapPoint> pMP, float viewingCosLimit);
 
     // Compute the cell of a keypoint (return false if outside the grid)
     bool PosInGrid(cv::KeyPoint &kp, int &posX, int &posY);

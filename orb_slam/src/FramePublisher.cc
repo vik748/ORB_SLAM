@@ -66,7 +66,7 @@ cv::Mat FramePublisher::DrawFrame()
     vector<cv::KeyPoint> vIniKeys; // Initialization: KeyPoints in reference frame
     vector<int> vMatches; // Initialization: correspondeces with reference keypoints
     vector<cv::KeyPoint> vCurrentKeys; // KeyPoints in current frame
-    vector<MapPoint*> vMatchedMapPoints; // Tracked MapPoints in current frame
+    vector<std::shared_ptr<MapPoint>> vMatchedMapPoints; // Tracked MapPoints in current frame
     int state; // Tracking state
 
     //Copy variable to be used within scoped mutex
