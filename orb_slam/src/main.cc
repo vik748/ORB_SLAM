@@ -169,7 +169,7 @@ int main(int argc, char **argv)
     // Save keyframe poses at the end of the execution
     ofstream f;
 
-    vector<ORB_SLAM::KeyFrame*> vpKFs = World.GetAllKeyFrames();
+    vector<shared_ptr<ORB_SLAM::KeyFrame>> vpKFs = World.GetAllKeyFrames();
     sort(vpKFs.begin(),vpKFs.end(),ORB_SLAM::KeyFrame::lId);
 
     cout << endl << "Saving Keyframe Trajectory to KeyFrameTrajectory.txt" << endl;
@@ -179,7 +179,7 @@ int main(int argc, char **argv)
 
     for(size_t i=0; i<vpKFs.size(); i++)
     {
-        ORB_SLAM::KeyFrame* pKF = vpKFs[i];
+        std::shared_ptr<ORB_SLAM::KeyFrame> pKF = vpKFs[i];
 
         if(pKF->isBad())
             continue;

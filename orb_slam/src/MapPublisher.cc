@@ -131,7 +131,7 @@ void MapPublisher::Refresh()
     }
     if(mpMap->isMapUpdated(mbLastMapUpdateIdx))
     {
-        vector<KeyFrame*> vKeyFrames = mpMap->GetAllKeyFrames();
+        vector<std::shared_ptr<KeyFrame>> vKeyFrames = mpMap->GetAllKeyFrames();
         vector<std::shared_ptr<MapPoint>> vMapPoints = mpMap->GetAllMapPoints();
         vector<std::shared_ptr<MapPoint>> vRefMapPoints = mpMap->GetReferenceMapPoints();
 
@@ -182,7 +182,7 @@ void MapPublisher::PublishMapPoints(const vector<std::shared_ptr<MapPoint>> &vpM
     publisher.publish(mReferencePoints);
 }
 
-void MapPublisher::PublishKeyFrames(const vector<KeyFrame*> &vpKFs)
+void MapPublisher::PublishKeyFrames(const vector<std::shared_ptr<KeyFrame>> &vpKFs)
 {
     mKeyFrames.points.clear();
     mCovisibilityGraph.points.clear();
@@ -242,10 +242,10 @@ void MapPublisher::PublishKeyFrames(const vector<KeyFrame*> &vpKFs)
         mKeyFrames.points.push_back(msgs_p1);
 
         // Covisibility Graph
-        vector<KeyFrame*> vCovKFs = vpKFs[i]->GetCovisiblesByWeight(100);
+        vector<std::shared_ptr<KeyFrame>> vCovKFs = vpKFs[i]->GetCovisiblesByWeight(100);
         if(!vCovKFs.empty())
         {
-            for(vector<KeyFrame*>::iterator vit=vCovKFs.begin(), vend=vCovKFs.end(); vit!=vend; vit++)
+            for(vector<std::shared_ptr<KeyFrame>>::iterator vit=vCovKFs.begin(), vend=vCovKFs.end(); vit!=vend; vit++)
             {
                 if((*vit)->mnId<vpKFs[i]->mnId)
                     continue;
@@ -260,7 +260,7 @@ void MapPublisher::PublishKeyFrames(const vector<KeyFrame*> &vpKFs)
         }
 
         // MST
-        KeyFrame* pParent = vpKFs[i]->GetParent();
+        std::shared_ptr<KeyFrame> pParent = vpKFs[i]->GetParent();
         if(pParent)
         {
             cv::Mat Owp = pParent->GetCameraCenter();
@@ -271,8 +271,8 @@ void MapPublisher::PublishKeyFrames(const vector<KeyFrame*> &vpKFs)
             mMST.points.push_back(msgs_o);
             mMST.points.push_back(msgs_op);
         }
-        set<KeyFrame*> sLoopKFs = vpKFs[i]->GetLoopEdges();
-        for(set<KeyFrame*>::iterator sit=sLoopKFs.begin(), send=sLoopKFs.end(); sit!=send; sit++)
+        set<std::shared_ptr<KeyFrame>> sLoopKFs = vpKFs[i]->GetLoopEdges();
+        for(set<std::shared_ptr<KeyFrame>>::iterator sit=sLoopKFs.begin(), send=sLoopKFs.end(); sit!=send; sit++)
         {
             if((*sit)->mnId<vpKFs[i]->mnId)
                 continue;

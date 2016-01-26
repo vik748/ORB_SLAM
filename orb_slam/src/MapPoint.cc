@@ -28,7 +28,7 @@ namespace ORB_SLAM
 long unsigned int MapPoint::nNextId=0;
 
 
-MapPoint::MapPoint(const cv::Mat &Pos, KeyFrame *pRefKF, Map* pMap):
+MapPoint::MapPoint(const cv::Mat &Pos, std::shared_ptr<KeyFrame>pRefKF, Map* pMap):
     mnFirstKFid(pRefKF->mnId), mnTrackReferenceForFrame(0), mnLastFrameSeen(0), mnBALocalForKF(0),
     mnLoopPointForKF(0), mnCorrectedByKF(0),mnCorrectedReference(0), mpRefKF(pRefKF), mnVisible(1), mnFound(1),
     mbBad(false), mfMinDistance(0), mfMaxDistance(0), mpMap(pMap)
@@ -56,19 +56,19 @@ cv::Mat MapPoint::GetNormal()
     return mNormalVector.clone();
 }
 
-KeyFrame* MapPoint::GetReferenceKeyFrame()
+std::shared_ptr<KeyFrame> MapPoint::GetReferenceKeyFrame()
 {
      boost::mutex::scoped_lock lock(mMutexFeatures);
      return mpRefKF;
 }
 
-void MapPoint::AddObservation(KeyFrame* pKF, size_t idx)
+void MapPoint::AddObservation(std::shared_ptr<KeyFrame> pKF, size_t idx)
 {
     boost::mutex::scoped_lock lock(mMutexFeatures);
     mObservations[pKF]=idx;
 }
 
-void MapPoint::EraseObservation(KeyFrame* pKF)
+void MapPoint::EraseObservation(std::shared_ptr<KeyFrame> pKF)
 {
     bool bBad=false;
     {
@@ -90,7 +90,7 @@ void MapPoint::EraseObservation(KeyFrame* pKF)
         SetBadFlag();
 }
 
-map<KeyFrame*, size_t> MapPoint::GetObservations()
+map<std::shared_ptr<KeyFrame>, size_t> MapPoint::GetObservations()
 {
     boost::mutex::scoped_lock lock(mMutexFeatures);
     return mObservations;
@@ -104,7 +104,7 @@ int MapPoint::Observations()
 
 void MapPoint::SetBadFlag()
 {
-    map<KeyFrame*,size_t> obs;
+    map<std::shared_ptr<KeyFrame>,size_t> obs;
     {
         boost::mutex::scoped_lock lock1(mMutexFeatures);
         boost::mutex::scoped_lock lock2(mMutexPos);
@@ -112,9 +112,9 @@ void MapPoint::SetBadFlag()
         obs = mObservations;
         mObservations.clear();
     }
-    for(map<KeyFrame*,size_t>::iterator mit=obs.begin(), mend=obs.end(); mit!=mend; mit++)
+    for(map<std::shared_ptr<KeyFrame>,size_t>::iterator mit=obs.begin(), mend=obs.end(); mit!=mend; mit++)
     {
-        KeyFrame* pKF = mit->first;
+        std::shared_ptr<KeyFrame> pKF = mit->first;
         pKF->EraseMapPointMatch(mit->second);
     }
 
@@ -126,7 +126,7 @@ void MapPoint::Replace(std::shared_ptr<MapPoint> pMP)
     if(pMP->mnId==this->mnId)
         return;
 
-    map<KeyFrame*,size_t> obs;
+    map<std::shared_ptr<KeyFrame>,size_t> obs;
     {
         boost::mutex::scoped_lock lock1(mMutexFeatures);
         boost::mutex::scoped_lock lock2(mMutexPos);
@@ -135,10 +135,10 @@ void MapPoint::Replace(std::shared_ptr<MapPoint> pMP)
         mbBad=true;
     }
 
-    for(map<KeyFrame*,size_t>::iterator mit=obs.begin(), mend=obs.end(); mit!=mend; mit++)
+    for(map<std::shared_ptr<KeyFrame>,size_t>::iterator mit=obs.begin(), mend=obs.end(); mit!=mend; mit++)
     {
         // Replace measurement in keyframe
-        KeyFrame* pKF = mit->first;
+        std::shared_ptr<KeyFrame> pKF = mit->first;
 
         if(!pMP->IsInKeyFrame(pKF))
         {
@@ -187,7 +187,7 @@ void MapPoint::ComputeDistinctiveDescriptors()
     // Retrieve all observed descriptors
     vector<cv::Mat> vDescriptors;
 
-    map<KeyFrame*,size_t> observations;
+    map<std::shared_ptr<KeyFrame>,size_t> observations;
 
     {
         boost::mutex::scoped_lock lock1(mMutexFeatures);
@@ -201,9 +201,9 @@ void MapPoint::ComputeDistinctiveDescriptors()
 
     vDescriptors.reserve(observations.size());
 
-    for(map<KeyFrame*,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
+    for(map<std::shared_ptr<KeyFrame>,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
     {
-        KeyFrame* pKF = mit->first;
+        std::shared_ptr<KeyFrame> pKF = mit->first;
 
         if(!pKF->isBad())
             vDescriptors.push_back(pKF->GetDescriptor(mit->second));
@@ -255,7 +255,7 @@ cv::Mat MapPoint::GetDescriptor()
     return mDescriptor.clone();
 }
 
-int MapPoint::GetIndexInKeyFrame(KeyFrame *pKF)
+int MapPoint::GetIndexInKeyFrame(std::shared_ptr<KeyFrame>pKF)
 {
     boost::mutex::scoped_lock lock(mMutexFeatures);
     if(mObservations.count(pKF))
@@ -264,7 +264,7 @@ int MapPoint::GetIndexInKeyFrame(KeyFrame *pKF)
         return -1;
 }
 
-bool MapPoint::IsInKeyFrame(KeyFrame *pKF)
+bool MapPoint::IsInKeyFrame(std::shared_ptr<KeyFrame>pKF)
 {
     boost::mutex::scoped_lock lock(mMutexFeatures);
     return (mObservations.count(pKF));
@@ -272,8 +272,8 @@ bool MapPoint::IsInKeyFrame(KeyFrame *pKF)
 
 void MapPoint::UpdateNormalAndDepth()
 {
-    map<KeyFrame*,size_t> observations;
-    KeyFrame* pRefKF;
+    map<std::shared_ptr<KeyFrame>,size_t> observations;
+    std::shared_ptr<KeyFrame> pRefKF;
     cv::Mat Pos;
     {
         boost::mutex::scoped_lock lock1(mMutexFeatures);
@@ -287,9 +287,9 @@ void MapPoint::UpdateNormalAndDepth()
 
     cv::Mat normal = cv::Mat::zeros(3,1,CV_32F);
     int n=0;
-    for(map<KeyFrame*,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
+    for(map<std::shared_ptr<KeyFrame>,size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
     {
-        KeyFrame* pKF = mit->first;
+        std::shared_ptr<KeyFrame> pKF = mit->first;
         cv::Mat Owi = pKF->GetCameraCenter();
         cv::Mat normali = mWorldPos - Owi;
         normal = normal + normali/cv::norm(normali);

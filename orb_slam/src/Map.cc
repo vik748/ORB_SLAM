@@ -29,7 +29,7 @@ Map::Map()
     mnMaxKFid = 0;
 }
 
-void Map::AddKeyFrame(KeyFrame *pKF)
+void Map::AddKeyFrame(std::shared_ptr<KeyFrame>pKF)
 {
     boost::mutex::scoped_lock lock(mMutexMap);
     mspKeyFrames.insert(pKF);
@@ -52,7 +52,7 @@ void Map::EraseMapPoint(std::shared_ptr<MapPoint> pMP)
     mbMapUpdateIdx++;
 }
 
-void Map::EraseKeyFrame(KeyFrame *pKF)
+void Map::EraseKeyFrame(std::shared_ptr<KeyFrame>pKF)
 {
     boost::mutex::scoped_lock lock(mMutexMap);
     mspKeyFrames.erase(pKF);
@@ -66,10 +66,10 @@ void Map::SetReferenceMapPoints(const vector<std::shared_ptr<MapPoint>> &vpMPs)
     mbMapUpdateIdx++;
 }
 
-vector<KeyFrame*> Map::GetAllKeyFrames()
+vector<std::shared_ptr<KeyFrame>> Map::GetAllKeyFrames()
 {
     boost::mutex::scoped_lock lock(mMutexMap);
-    return vector<KeyFrame*>(mspKeyFrames.begin(),mspKeyFrames.end());
+    return vector<std::shared_ptr<KeyFrame>>(mspKeyFrames.begin(),mspKeyFrames.end());
 }
 
 vector<std::shared_ptr<MapPoint>> Map::GetAllMapPoints()
@@ -121,9 +121,6 @@ unsigned int Map::GetMaxKFid()
 
 void Map::clear()
 {
-    for(set<KeyFrame*>::iterator sit=mspKeyFrames.begin(), send=mspKeyFrames.end(); sit!=send; sit++)
-        delete *sit;
-
     mspMapPoints.clear();
     mspKeyFrames.clear();
     mnMaxKFid = 0;

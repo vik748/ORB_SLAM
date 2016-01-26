@@ -34,7 +34,7 @@ namespace ORB_SLAM
 {
 
 
-Sim3Solver::Sim3Solver(KeyFrame *pKF1, KeyFrame *pKF2, const vector<std::shared_ptr<MapPoint>> &vpMatched12):
+Sim3Solver::Sim3Solver(std::shared_ptr<KeyFrame>pKF1, std::shared_ptr<KeyFrame>pKF2, const vector<std::shared_ptr<MapPoint>> &vpMatched12):
     mnIterations(0), mnBestInliers(0)
 {
     mpKF1 = pKF1;

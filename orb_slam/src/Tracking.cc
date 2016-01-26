@@ -388,8 +388,8 @@ void Tracking::CreateInitialMap(cv::Mat &Rcw, cv::Mat &tcw)
     tcw.copyTo(mCurrentFrame.mTcw.rowRange(0,3).col(3));
 
     // Create KeyFrames
-    KeyFrame* pKFini = new KeyFrame(mInitialFrame,mpMap,mpKeyFrameDB);
-    KeyFrame* pKFcur = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
+    std::shared_ptr<KeyFrame> pKFini( new KeyFrame(mInitialFrame,mpMap,mpKeyFrameDB));
+    std::shared_ptr<KeyFrame> pKFcur( new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB));
 
     pKFini->ComputeBoW();
     pKFcur->ComputeBoW();
@@ -664,7 +664,7 @@ bool Tracking::NeedNewKeyFrame()
 
 void Tracking::CreateNewKeyFrame()
 {
-    KeyFrame* pKF = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
+    std::shared_ptr<KeyFrame> pKF(new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB));
 
     mpLocalMapper->InsertKeyFrame(pKF);
 
@@ -739,9 +739,9 @@ void Tracking::UpdateReferencePoints()
 {
     mvpLocalMapPoints.clear();
 
-    for(vector<KeyFrame*>::iterator itKF=mvpLocalKeyFrames.begin(), itEndKF=mvpLocalKeyFrames.end(); itKF!=itEndKF; itKF++)
+    for(vector<std::shared_ptr<KeyFrame>>::iterator itKF=mvpLocalKeyFrames.begin(), itEndKF=mvpLocalKeyFrames.end(); itKF!=itEndKF; itKF++)
     {
-        KeyFrame* pKF = *itKF;
+        std::shared_ptr<KeyFrame> pKF = *itKF;
         vector<std::shared_ptr<MapPoint>> vpMPs = pKF->GetMapPointMatches();
 
         for(vector<std::shared_ptr<MapPoint>>::iterator itMP=vpMPs.begin(), itEndMP=vpMPs.end(); itMP!=itEndMP; itMP++)
@@ -764,7 +764,7 @@ void Tracking::UpdateReferencePoints()
 void Tracking::UpdateReferenceKeyFrames()
 {
     // Each map point vote for the keyframes in which it has been observed
-    map<KeyFrame*,int> keyframeCounter;
+    map<std::shared_ptr<KeyFrame>,int> keyframeCounter;
     for(size_t i=0, iend=mCurrentFrame.mvpMapPoints.size(); i<iend;i++)
     {
         if(mCurrentFrame.mvpMapPoints[i])
@@ -772,8 +772,8 @@ void Tracking::UpdateReferenceKeyFrames()
             std::shared_ptr<MapPoint> pMP = mCurrentFrame.mvpMapPoints[i];
             if(!pMP->isBad())
             {
-                map<KeyFrame*,size_t> observations = pMP->GetObservations();
-                for(map<KeyFrame*,size_t>::iterator it=observations.begin(), itend=observations.end(); it!=itend; it++)
+                map<std::shared_ptr<KeyFrame>,size_t> observations = pMP->GetObservations();
+                for(map<std::shared_ptr<KeyFrame>,size_t>::iterator it=observations.begin(), itend=observations.end(); it!=itend; it++)
                     keyframeCounter[it->first]++;
             }
             else
@@ -784,15 +784,15 @@ void Tracking::UpdateReferenceKeyFrames()
     }
 
     int max=0;
-    KeyFrame* pKFmax=NULL;
+    std::shared_ptr<KeyFrame> pKFmax=NULL;
 
     mvpLocalKeyFrames.clear();
     mvpLocalKeyFrames.reserve(3*keyframeCounter.size());
 
     // All keyframes that observe a map point are included in the local map. Also check which keyframe shares most points
-    for(map<KeyFrame*,int>::iterator it=keyframeCounter.begin(), itEnd=keyframeCounter.end(); it!=itEnd; it++)
+    for(map<std::shared_ptr<KeyFrame>,int>::iterator it=keyframeCounter.begin(), itEnd=keyframeCounter.end(); it!=itEnd; it++)
     {
-        KeyFrame* pKF = it->first;
+        std::shared_ptr<KeyFrame> pKF = it->first;
 
         if(pKF->isBad())
             continue;
@@ -809,19 +809,19 @@ void Tracking::UpdateReferenceKeyFrames()
 
 
     // Include also some not-already-included keyframes that are neighbors to already-included keyframes
-    for(vector<KeyFrame*>::iterator itKF=mvpLocalKeyFrames.begin(), itEndKF=mvpLocalKeyFrames.end(); itKF!=itEndKF; itKF++)
+    for(vector<std::shared_ptr<KeyFrame>>::iterator itKF=mvpLocalKeyFrames.begin(), itEndKF=mvpLocalKeyFrames.end(); itKF!=itEndKF; itKF++)
     {
         // Limit the number of keyframes
         if(mvpLocalKeyFrames.size()>80)
             break;
 
-        KeyFrame* pKF = *itKF;
+        std::shared_ptr<KeyFrame> pKF = *itKF;
 
-        vector<KeyFrame*> vNeighs = pKF->GetBestCovisibilityKeyFrames(10);
+        vector<std::shared_ptr<KeyFrame>> vNeighs = pKF->GetBestCovisibilityKeyFrames(10);
 
-        for(vector<KeyFrame*>::iterator itNeighKF=vNeighs.begin(), itEndNeighKF=vNeighs.end(); itNeighKF!=itEndNeighKF; itNeighKF++)
+        for(vector<std::shared_ptr<KeyFrame>>::iterator itNeighKF=vNeighs.begin(), itEndNeighKF=vNeighs.end(); itNeighKF!=itEndNeighKF; itNeighKF++)
         {
-            KeyFrame* pNeighKF = *itNeighKF;
+            std::shared_ptr<KeyFrame> pNeighKF = *itNeighKF;
             if(!pNeighKF->isBad())
             {
                 if(pNeighKF->mnTrackReferenceForFrame!=mCurrentFrame.mnId)
@@ -845,7 +845,7 @@ bool Tracking::Relocalisation()
 
     // Relocalisation is performed when tracking is lost and forced at some stages during loop closing
     // Track Lost: Query KeyFrame Database for keyframe candidates for relocalisation
-    vector<KeyFrame*> vpCandidateKFs;
+    vector<std::shared_ptr<KeyFrame>> vpCandidateKFs;
     if(!RelocalisationRequested())
         vpCandidateKFs= mpKeyFrameDB->DetectRelocalisationCandidates(&mCurrentFrame);
     else // Forced Relocalisation: Relocate against local window around last keyframe
@@ -879,7 +879,7 @@ bool Tracking::Relocalisation()
 
     for(size_t i=0; i<vpCandidateKFs.size(); i++)
     {
-        KeyFrame* pKF = vpCandidateKFs[i];
+        std::shared_ptr<KeyFrame> pKF = vpCandidateKFs[i];
         if(pKF->isBad())
             vbDiscarded[i] = true;
         else

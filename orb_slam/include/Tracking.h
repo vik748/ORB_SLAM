@@ -131,8 +131,8 @@ protected:
     Initializer* mpInitializer;
 
     //Local Map
-    KeyFrame* mpReferenceKF;
-    std::vector<KeyFrame*> mvpLocalKeyFrames;
+    std::shared_ptr<KeyFrame> mpReferenceKF;
+    std::vector<std::shared_ptr<KeyFrame>> mvpLocalKeyFrames;
     std::vector<std::shared_ptr<MapPoint>> mvpLocalMapPoints;
 
     //Publishers
@@ -154,7 +154,7 @@ protected:
     int mnMatchesInliers;
 
     //Last Frame, KeyFrame and Relocalisation Info
-    KeyFrame* mpLastKeyFrame;
+    std::shared_ptr<KeyFrame> mpLastKeyFrame;
     Frame mLastFrame;
     unsigned int mnLastKeyFrameId;
     unsigned int mnLastRelocFrameId;

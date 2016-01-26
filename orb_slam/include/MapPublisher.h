@@ -42,7 +42,7 @@ public:
 
     void Refresh();
     void PublishMapPoints(const std::vector<std::shared_ptr<MapPoint>> &vpMPs, const std::vector<std::shared_ptr<MapPoint>> &vpRefMPs);
-    void PublishKeyFrames(const std::vector<KeyFrame*> &vpKFs);
+    void PublishKeyFrames(const std::vector<std::shared_ptr<KeyFrame>> &vpKFs);
     void PublishCurrentCamera(const cv::Mat &Tcw);
     void SetCurrentCameraPose(const cv::Mat &Tcw);
 

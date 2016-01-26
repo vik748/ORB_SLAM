@@ -49,7 +49,7 @@ public:
 
     void Run();
 
-    void InsertKeyFrame(KeyFrame* pKF);
+    void InsertKeyFrame(std::shared_ptr<KeyFrame> pKF);
 
     // Thread Synch
     void RequestStop();
@@ -79,7 +79,7 @@ protected:
 
     void KeyFrameCulling();
 
-    cv::Mat ComputeF12(KeyFrame* &pKF1, KeyFrame* &pKF2);
+    cv::Mat ComputeF12(std::shared_ptr<KeyFrame> &pKF1, std::shared_ptr<KeyFrame> &pKF2);
 
     cv::Mat SkewSymmetricMatrix(const cv::Mat &v);
 
@@ -92,9 +92,9 @@ protected:
     LoopClosing* mpLoopCloser;
     Tracking* mpTracker;
 
-    std::list<KeyFrame*> mlNewKeyFrames;
+    std::list<std::shared_ptr<KeyFrame>> mlNewKeyFrames;
 
-    KeyFrame* mpCurrentKeyFrame;
+    std::shared_ptr<KeyFrame> mpCurrentKeyFrame;
 
     std::list<std::shared_ptr<MapPoint>> mlpRecentAddedMapPoints;
 

@@ -55,17 +55,17 @@ public:
 
     // Project MapPoints seen in KeyFrame into the Frame and search matches.
     // Used in relocalisation (Tracking)
-    int SearchByProjection(Frame &CurrentFrame, KeyFrame* pKF, const std::set<std::shared_ptr<MapPoint>> &sAlreadyFound, float th, int ORBdist);
+    int SearchByProjection(Frame &CurrentFrame, std::shared_ptr<KeyFrame> pKF, const std::set<std::shared_ptr<MapPoint>> &sAlreadyFound, float th, int ORBdist);
 
     // Project MapPoints using a Similarity Transformation and search matches.
     // Used in loop detection (Loop Closing)
-     int SearchByProjection(KeyFrame* pKF, cv::Mat Scw, const std::vector<std::shared_ptr<MapPoint>> &vpPoints, std::vector<std::shared_ptr<MapPoint>> &vpMatched, int th);
+     int SearchByProjection(std::shared_ptr<KeyFrame> pKF, cv::Mat Scw, const std::vector<std::shared_ptr<MapPoint>> &vpPoints, std::vector<std::shared_ptr<MapPoint>> &vpMatched, int th);
 
     // Search matches between MapPoints in a KeyFrame and ORB in a Frame.
     // Brute force constrained to ORB that belong to the same vocabulary node (at a certain level)
     // Used in Relocalisation and Loop Detection
-    int SearchByBoW(KeyFrame *pKF, Frame &F, std::vector<std::shared_ptr<MapPoint>> &vpMapPointMatches);
-    int SearchByBoW(KeyFrame *pKF1, KeyFrame* pKF2, std::vector<std::shared_ptr<MapPoint>> &vpMatches12);
+    int SearchByBoW(std::shared_ptr<KeyFrame>pKF, Frame &F, std::vector<std::shared_ptr<MapPoint>> &vpMapPointMatches);
+    int SearchByBoW(std::shared_ptr<KeyFrame>pKF1, std::shared_ptr<KeyFrame> pKF2, std::vector<std::shared_ptr<MapPoint>> &vpMatches12);
 
     // Search MapPoints tracked in Frame1 in Frame2 in a window centered at their position in Frame1
     int WindowSearch(Frame &F1, Frame &F2, int windowSize, std::vector<std::shared_ptr<MapPoint>> &vpMapPointMatches2, int minOctave=-1, int maxOctave=INT_MAX);
@@ -76,18 +76,18 @@ public:
     int SearchForInitialization(Frame &F1, Frame &F2, std::vector<cv::Point2f> &vbPrevMatched, std::vector<int> &vnMatches12, int windowSize=10);
 
     // Matching to triangulate new MapPoints. Check Epipolar Constraint
-    int SearchForTriangulation(KeyFrame *pKF1, KeyFrame* pKF2, cv::Mat F12,
+    int SearchForTriangulation(std::shared_ptr<KeyFrame>pKF1, std::shared_ptr<KeyFrame> pKF2, cv::Mat F12,
                                std::vector<cv::KeyPoint> &vMatchedKeys1, std::vector<cv::KeyPoint> &vMatchedKeys2,
                                std::vector<pair<size_t, size_t> > &vMatchedPairs);
 
     // Search matches between MapPoints seen in KF1 and KF2 transforming by a Sim3 [s12*R12|t12]
-    int SearchBySim3(KeyFrame* pKF1, KeyFrame* pKF2, std::vector<std::shared_ptr<MapPoint>> &vpMatches12, const float &s12, const cv::Mat &R12, const cv::Mat &t12, float th);
+    int SearchBySim3(std::shared_ptr<KeyFrame> pKF1, std::shared_ptr<KeyFrame> pKF2, std::vector<std::shared_ptr<MapPoint>> &vpMatches12, const float &s12, const cv::Mat &R12, const cv::Mat &t12, float th);
 
     // Project MapPoints into KeyFrame and search for duplicated MapPoints.
-    int Fuse(KeyFrame* pKF, std::vector<std::shared_ptr<MapPoint>> &vpMapPoints, float th=2.5);
+    int Fuse(std::shared_ptr<KeyFrame> pKF, std::vector<std::shared_ptr<MapPoint>> &vpMapPoints, float th=2.5);
 
     // Project MapPoints into KeyFrame using a given Sim3 and search for duplicated MapPoints.
-    int Fuse(KeyFrame* pKF, cv::Mat Scw, const std::vector<std::shared_ptr<MapPoint>> &vpPoints, float th=2.5);
+    int Fuse(std::shared_ptr<KeyFrame> pKF, cv::Mat Scw, const std::vector<std::shared_ptr<MapPoint>> &vpPoints, float th=2.5);
 
 public:
 
@@ -98,7 +98,7 @@ public:
 
 protected:
 
-    bool CheckDistEpipolarLine(const cv::KeyPoint &kp1, const cv::KeyPoint &kp2, const cv::Mat &F12, const KeyFrame *pKF);
+    bool CheckDistEpipolarLine(const cv::KeyPoint &kp1, const cv::KeyPoint &kp2, const cv::Mat &F12, const std::shared_ptr<KeyFrame>pKF);
 
     float RadiusByViewingCos(const float &viewCos);
 

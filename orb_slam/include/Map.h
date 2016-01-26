@@ -41,18 +41,18 @@ class Map
 public:
     Map();
 
-    void AddKeyFrame(KeyFrame* pKF);
+    void AddKeyFrame(std::shared_ptr<KeyFrame> pKF);
     void AddMapPoint(std::shared_ptr<MapPoint> pMP);
     void EraseMapPoint(std::shared_ptr<MapPoint> pMP);
-    void EraseKeyFrame(KeyFrame* pKF);
+    void EraseKeyFrame(std::shared_ptr<KeyFrame> pKF);
     void SetCurrentCameraPose(cv::Mat Tcw);
-    void SetReferenceKeyFrames(const std::vector<KeyFrame*> &vpKFs);
+    void SetReferenceKeyFrames(const std::vector<std::shared_ptr<KeyFrame>> &vpKFs);
     void SetReferenceMapPoints(const std::vector<std::shared_ptr<MapPoint>> &vpMPs);
 
-    std::vector<KeyFrame*> GetAllKeyFrames();
+    std::vector<std::shared_ptr<KeyFrame>> GetAllKeyFrames();
     std::vector<std::shared_ptr<MapPoint>> GetAllMapPoints();
     cv::Mat GetCameraPose();
-    std::vector<KeyFrame*> GetReferenceKeyFrames();
+    std::vector<std::shared_ptr<KeyFrame>> GetReferenceKeyFrames();
     std::vector<std::shared_ptr<MapPoint>> GetReferenceMapPoints();
 
     int MapPointsInMap();
@@ -68,7 +68,7 @@ public:
 
 protected:
     std::set<std::shared_ptr<MapPoint>> mspMapPoints;
-    std::set<KeyFrame*> mspKeyFrames;
+    std::set<std::shared_ptr<KeyFrame>> mspKeyFrames;
 
     std::vector<std::shared_ptr<MapPoint>> mvpReferenceMapPoints;
 

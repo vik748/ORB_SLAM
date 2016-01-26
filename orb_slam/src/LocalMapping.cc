@@ -105,7 +105,7 @@ void LocalMapping::Run()
     }
 }
 
-void LocalMapping::InsertKeyFrame(KeyFrame *pKF)
+void LocalMapping::InsertKeyFrame(std::shared_ptr<KeyFrame>pKF)
 {
     boost::mutex::scoped_lock lock(mMutexNewKFs);
     mlNewKeyFrames.push_back(pKF);
@@ -205,7 +205,7 @@ void LocalMapping::MapPointCulling()
 void LocalMapping::CreateNewMapPoints()
 {
     // Take neighbor keyframes in covisibility graph
-    vector<KeyFrame*> vpNeighKFs = mpCurrentKeyFrame->GetBestCovisibilityKeyFrames(20);
+    vector<std::shared_ptr<KeyFrame>> vpNeighKFs = mpCurrentKeyFrame->GetBestCovisibilityKeyFrames(20);
 
     ORBmatcher matcher(0.6,false);
 
@@ -229,7 +229,7 @@ void LocalMapping::CreateNewMapPoints()
     // Search matches with epipolar restriction and triangulate
     for(size_t i=0; i<vpNeighKFs.size(); i++)
     {
-        KeyFrame* pKF2 = vpNeighKFs[i];
+        std::shared_ptr<KeyFrame> pKF2 = vpNeighKFs[i];
 
         // Check first that baseline is not too short
         // Small translation errors for short baseline keyframes make scale to diverge
@@ -373,21 +373,21 @@ void LocalMapping::CreateNewMapPoints()
 void LocalMapping::SearchInNeighbors()
 {
     // Retrieve neighbor keyframes
-    vector<KeyFrame*> vpNeighKFs = mpCurrentKeyFrame->GetBestCovisibilityKeyFrames(20);
-    vector<KeyFrame*> vpTargetKFs;
-    for(vector<KeyFrame*>::iterator vit=vpNeighKFs.begin(), vend=vpNeighKFs.end(); vit!=vend; vit++)
+    vector<std::shared_ptr<KeyFrame>> vpNeighKFs = mpCurrentKeyFrame->GetBestCovisibilityKeyFrames(20);
+    vector<std::shared_ptr<KeyFrame>> vpTargetKFs;
+    for(vector<std::shared_ptr<KeyFrame>>::iterator vit=vpNeighKFs.begin(), vend=vpNeighKFs.end(); vit!=vend; vit++)
     {
-        KeyFrame* pKFi = *vit;
+        std::shared_ptr<KeyFrame> pKFi = *vit;
         if(pKFi->isBad() || pKFi->mnFuseTargetForKF == mpCurrentKeyFrame->mnId)
             continue;
         vpTargetKFs.push_back(pKFi);
         pKFi->mnFuseTargetForKF = mpCurrentKeyFrame->mnId;
 
         // Extend to some second neighbors
-        vector<KeyFrame*> vpSecondNeighKFs = pKFi->GetBestCovisibilityKeyFrames(5);
-        for(vector<KeyFrame*>::iterator vit2=vpSecondNeighKFs.begin(), vend2=vpSecondNeighKFs.end(); vit2!=vend2; vit2++)
+        vector<std::shared_ptr<KeyFrame>> vpSecondNeighKFs = pKFi->GetBestCovisibilityKeyFrames(5);
+        for(vector<std::shared_ptr<KeyFrame>>::iterator vit2=vpSecondNeighKFs.begin(), vend2=vpSecondNeighKFs.end(); vit2!=vend2; vit2++)
         {
-            KeyFrame* pKFi2 = *vit2;
+            std::shared_ptr<KeyFrame> pKFi2 = *vit2;
             if(pKFi2->isBad() || pKFi2->mnFuseTargetForKF==mpCurrentKeyFrame->mnId || pKFi2->mnId==mpCurrentKeyFrame->mnId)
                 continue;
             vpTargetKFs.push_back(pKFi2);
@@ -398,9 +398,9 @@ void LocalMapping::SearchInNeighbors()
     // Search matches by projection from current KF in target KFs
     ORBmatcher matcher(0.6);
     vector<std::shared_ptr<MapPoint>> vpMapPointMatches = mpCurrentKeyFrame->GetMapPointMatches();
-    for(vector<KeyFrame*>::iterator vit=vpTargetKFs.begin(), vend=vpTargetKFs.end(); vit!=vend; vit++)
+    for(vector<std::shared_ptr<KeyFrame>>::iterator vit=vpTargetKFs.begin(), vend=vpTargetKFs.end(); vit!=vend; vit++)
     {
-        KeyFrame* pKFi = *vit;
+        std::shared_ptr<KeyFrame> pKFi = *vit;
 
         matcher.Fuse(pKFi,vpMapPointMatches);
     }
@@ -409,9 +409,9 @@ void LocalMapping::SearchInNeighbors()
     vector<std::shared_ptr<MapPoint>> vpFuseCandidates;
     vpFuseCandidates.reserve(vpTargetKFs.size()*vpMapPointMatches.size());
 
-    for(vector<KeyFrame*>::iterator vitKF=vpTargetKFs.begin(), vendKF=vpTargetKFs.end(); vitKF!=vendKF; vitKF++)
+    for(vector<std::shared_ptr<KeyFrame>>::iterator vitKF=vpTargetKFs.begin(), vendKF=vpTargetKFs.end(); vitKF!=vendKF; vitKF++)
     {
-        KeyFrame* pKFi = *vitKF;
+        std::shared_ptr<KeyFrame> pKFi = *vitKF;
 
         vector<std::shared_ptr<MapPoint>> vpMapPointsKFi = pKFi->GetMapPointMatches();
 
@@ -449,7 +449,7 @@ void LocalMapping::SearchInNeighbors()
     mpCurrentKeyFrame->UpdateConnections();
 }
 
-cv::Mat LocalMapping::ComputeF12(KeyFrame *&pKF1, KeyFrame *&pKF2)
+cv::Mat LocalMapping::ComputeF12(std::shared_ptr<KeyFrame>&pKF1, std::shared_ptr<KeyFrame>&pKF2)
 {
     cv::Mat R1w = pKF1->GetRotation();
     cv::Mat t1w = pKF1->GetTranslation();
@@ -499,8 +499,6 @@ void LocalMapping::Release()
     boost::mutex::scoped_lock lock(mMutexStop);
     mbStopped = false;
     mbStopRequested = false;
-    for(list<KeyFrame*>::iterator lit = mlNewKeyFrames.begin(), lend=mlNewKeyFrames.end(); lit!=lend; lit++)
-        delete *lit;
     mlNewKeyFrames.clear();
 }
 
@@ -526,11 +524,11 @@ void LocalMapping::KeyFrameCulling()
     // Check redundant keyframes (only local keyframes)
     // A keyframe is considered redundant if the 90% of the MapPoints it sees, are seen
     // in at least other 3 keyframes (in the same or finer scale)
-    vector<KeyFrame*> vpLocalKeyFrames = mpCurrentKeyFrame->GetVectorCovisibleKeyFrames();
+    vector<std::shared_ptr<KeyFrame>> vpLocalKeyFrames = mpCurrentKeyFrame->GetVectorCovisibleKeyFrames();
 
-    for(vector<KeyFrame*>::iterator vit=vpLocalKeyFrames.begin(), vend=vpLocalKeyFrames.end(); vit!=vend; vit++)
+    for(vector<std::shared_ptr<KeyFrame>>::iterator vit=vpLocalKeyFrames.begin(), vend=vpLocalKeyFrames.end(); vit!=vend; vit++)
     {
-        KeyFrame* pKF = *vit;
+        std::shared_ptr<KeyFrame> pKF = *vit;
         if(pKF->mnId==0)
             continue;
         vector<std::shared_ptr<MapPoint>> vpMapPoints = pKF->GetMapPointMatches();
@@ -548,11 +546,11 @@ void LocalMapping::KeyFrameCulling()
                     if(pMP->Observations()>3)
                     {
                         int scaleLevel = pKF->GetKeyPointUn(i).octave;
-                        map<KeyFrame*, size_t> observations = pMP->GetObservations();
+                        map<std::shared_ptr<KeyFrame>, size_t> observations = pMP->GetObservations();
                         int nObs=0;
-                        for(map<KeyFrame*, size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
+                        for(map<std::shared_ptr<KeyFrame>, size_t>::iterator mit=observations.begin(), mend=observations.end(); mit!=mend; mit++)
                         {
-                            KeyFrame* pKFi = mit->first;
+                            std::shared_ptr<KeyFrame> pKFi = mit->first;
                             if(pKFi==pKF)
                                 continue;
                             int scaleLeveli = pKFi->GetKeyPointUn(mit->second).octave;

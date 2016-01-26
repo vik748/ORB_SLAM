@@ -98,7 +98,7 @@ public:
     static long unsigned int nNextId;
     long unsigned int mnId;
 
-    KeyFrame* mpReferenceKF;
+    std::shared_ptr<KeyFrame> mpReferenceKF;
 
     void ComputeBoW();
 

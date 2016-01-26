@@ -133,7 +133,7 @@ float ORBmatcher::RadiusByViewingCos(const float &viewCos)
 }
 
 
-bool ORBmatcher::CheckDistEpipolarLine(const cv::KeyPoint &kp1,const cv::KeyPoint &kp2,const cv::Mat &F12,const KeyFrame* pKF2)
+bool ORBmatcher::CheckDistEpipolarLine(const cv::KeyPoint &kp1,const cv::KeyPoint &kp2,const cv::Mat &F12,const std::shared_ptr<KeyFrame> pKF2)
 {
     // Epipolar line in second image l = x1'F12 = [a b c]
     const float a = kp1.pt.x*F12.at<float>(0,0)+kp1.pt.y*F12.at<float>(1,0)+F12.at<float>(2,0);
@@ -152,7 +152,7 @@ bool ORBmatcher::CheckDistEpipolarLine(const cv::KeyPoint &kp1,const cv::KeyPoin
     return dsqr<3.84*pKF2->GetSigma2(kp2.octave);
 }
 
-int ORBmatcher::SearchByBoW(KeyFrame* pKF,Frame &F, vector<std::shared_ptr<MapPoint>> &vpMapPointMatches)
+int ORBmatcher::SearchByBoW(std::shared_ptr<KeyFrame> pKF,Frame &F, vector<std::shared_ptr<MapPoint>> &vpMapPointMatches)
 {
     vector<std::shared_ptr<MapPoint>> vpMapPointsKF = pKF->GetMapPointMatches();
 
@@ -283,7 +283,7 @@ int ORBmatcher::SearchByBoW(KeyFrame* pKF,Frame &F, vector<std::shared_ptr<MapPo
     return nmatches;
 }
 
-int ORBmatcher::SearchByProjection(KeyFrame* pKF, cv::Mat Scw, const vector<std::shared_ptr<MapPoint>> &vpPoints, vector<std::shared_ptr<MapPoint>> &vpMatched, int th)
+int ORBmatcher::SearchByProjection(std::shared_ptr<KeyFrame> pKF, cv::Mat Scw, const vector<std::shared_ptr<MapPoint>> &vpPoints, vector<std::shared_ptr<MapPoint>> &vpMatched, int th)
 {
     // Get Calibration Parameters for later projection
     const float fx = pKF->fx;
@@ -712,7 +712,7 @@ int ORBmatcher::SearchForInitialization(Frame &F1, Frame &F2, vector<cv::Point2f
     return nmatches;
 }
 
-int ORBmatcher::SearchByBoW(KeyFrame *pKF1, KeyFrame *pKF2, vector<std::shared_ptr<MapPoint>> &vpMatches12)
+int ORBmatcher::SearchByBoW(std::shared_ptr<KeyFrame>pKF1, std::shared_ptr<KeyFrame>pKF2, vector<std::shared_ptr<MapPoint>> &vpMatches12)
 {
     vector<cv::KeyPoint> vKeysUn1 = pKF1->GetKeyPointsUn();
     DBoW2::FeatureVector vFeatVec1 = pKF1->GetFeatureVector();
@@ -849,7 +849,7 @@ int ORBmatcher::SearchByBoW(KeyFrame *pKF1, KeyFrame *pKF2, vector<std::shared_p
     return nmatches;
 }
 
-int ORBmatcher::SearchForTriangulation(KeyFrame *pKF1, KeyFrame *pKF2, cv::Mat F12,
+int ORBmatcher::SearchForTriangulation(std::shared_ptr<KeyFrame>pKF1, std::shared_ptr<KeyFrame>pKF2, cv::Mat F12,
 vector<cv::KeyPoint> &vMatchedKeys1, vector<cv::KeyPoint> &vMatchedKeys2, vector<pair<size_t, size_t> > &vMatchedPairs)
 {
     vector<std::shared_ptr<MapPoint>> vpMapPoints1 = pKF1->GetMapPointMatches();
@@ -1013,7 +1013,7 @@ vector<cv::KeyPoint> &vMatchedKeys1, vector<cv::KeyPoint> &vMatchedKeys2, vector
     return nmatches;
 }
 
-int ORBmatcher::Fuse(KeyFrame *pKF, vector<std::shared_ptr<MapPoint>> &vpMapPoints, float th)
+int ORBmatcher::Fuse(std::shared_ptr<KeyFrame>pKF, vector<std::shared_ptr<MapPoint>> &vpMapPoints, float th)
 {
     cv::Mat Rcw = pKF->GetRotation();
     cv::Mat tcw = pKF->GetTranslation();
@@ -1133,7 +1133,7 @@ int ORBmatcher::Fuse(KeyFrame *pKF, vector<std::shared_ptr<MapPoint>> &vpMapPoin
     return nFused;
 }
 
-int ORBmatcher::Fuse(KeyFrame *pKF, cv::Mat Scw, const vector<std::shared_ptr<MapPoint>> &vpPoints, float th)
+int ORBmatcher::Fuse(std::shared_ptr<KeyFrame>pKF, cv::Mat Scw, const vector<std::shared_ptr<MapPoint>> &vpPoints, float th)
 {
     // Get Calibration Parameters for later projection
     const float &fx = pKF->fx;
@@ -1264,7 +1264,7 @@ int ORBmatcher::Fuse(KeyFrame *pKF, cv::Mat Scw, const vector<std::shared_ptr<Ma
 
 }
 
-int ORBmatcher::SearchBySim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<std::shared_ptr<MapPoint>> &vpMatches12,
+int ORBmatcher::SearchBySim3(std::shared_ptr<KeyFrame>pKF1, std::shared_ptr<KeyFrame>pKF2, vector<std::shared_ptr<MapPoint>> &vpMatches12,
                                    const float &s12, const cv::Mat &R12, const cv::Mat &t12, float th)
 {
     const float fx = pKF1->fx;
@@ -1619,7 +1619,7 @@ int ORBmatcher::SearchByProjection(Frame &CurrentFrame, const Frame &LastFrame, 
    return nmatches;
 }
 
-int ORBmatcher::SearchByProjection(Frame &CurrentFrame, KeyFrame *pKF, const set<std::shared_ptr<MapPoint>> &sAlreadyFound, float th ,int ORBdist)
+int ORBmatcher::SearchByProjection(Frame &CurrentFrame, std::shared_ptr<KeyFrame>pKF, const set<std::shared_ptr<MapPoint>> &sAlreadyFound, float th ,int ORBdist)
 {
     int nmatches = 0;
 
