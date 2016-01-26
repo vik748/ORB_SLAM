@@ -120,15 +120,15 @@ protected:
     LoopClosing* mpLoopClosing;
 
     //ORB
-    ORBextractor* mpORBextractor;
-    ORBextractor* mpIniORBextractor;
+    std::shared_ptr<ORBextractor> mpORBextractor;
+    std::shared_ptr<ORBextractor> mpIniORBextractor;
 
     //BoW
     ORBVocabulary* mpORBVocabulary;
     KeyFrameDatabase* mpKeyFrameDB;
 
     // Initalization
-    Initializer* mpInitializer;
+    std::shared_ptr<Initializer> mpInitializer;
 
     //Local Map
     std::shared_ptr<KeyFrame> mpReferenceKF;

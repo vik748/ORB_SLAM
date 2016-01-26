@@ -108,7 +108,7 @@ Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPubl
 
     assert(Score==1 || Score==0);
 
-    mpORBextractor = new ORBextractor(nFeatures,fScaleFactor,nLevels,Score,fastTh);
+    mpORBextractor = std::shared_ptr<ORBextractor>(new ORBextractor(nFeatures,fScaleFactor,nLevels,Score,fastTh));
 
     cout << endl  << "ORB Extractor Parameters: " << endl;
     cout << "- Number of Features: " << nFeatures << endl;
@@ -123,7 +123,7 @@ Tracking::Tracking(ORBVocabulary* pVoc, FramePublisher *pFramePublisher, MapPubl
 
     // ORB extractor for initialization
     // Initialization uses only points from the finest scale level
-    mpIniORBextractor = new ORBextractor(nFeatures*2,1.2,8,Score,fastTh);  
+    mpIniORBextractor = std::shared_ptr<ORBextractor>(new ORBextractor(nFeatures*2,1.2,8,Score,fastTh));
 
     int nMotion = fSettings["UseMotionModel"];
     mbMotionModel = nMotion;
@@ -328,10 +328,7 @@ void Tracking::FirstInitialization()
         for(size_t i=0; i<mCurrentFrame.mvKeysUn.size(); i++)
             mvbPrevMatched[i]=mCurrentFrame.mvKeysUn[i].pt;
 
-        if(mpInitializer)
-            delete mpInitializer;
-
-        mpInitializer =  new Initializer(mCurrentFrame,1.0,200);
+        mpInitializer =  shared_ptr<Initializer>(new Initializer(mCurrentFrame,1.0,200));
 
 
         mState = INITIALIZING;
@@ -866,10 +863,10 @@ bool Tracking::Relocalisation()
     // If enough matches are found we setup a PnP solver
     ORBmatcher matcher(0.75,true);
 
-    vector<PnPsolver*> vpPnPsolvers;
+    vector<shared_ptr<PnPsolver>> vpPnPsolvers;
     vpPnPsolvers.resize(nKFs);
 
-    vector<vector<std::shared_ptr<MapPoint>> > vvpMapPointMatches;
+    vector<vector<shared_ptr<MapPoint>> > vvpMapPointMatches;
     vvpMapPointMatches.resize(nKFs);
 
     vector<bool> vbDiscarded;
@@ -879,7 +876,7 @@ bool Tracking::Relocalisation()
 
     for(size_t i=0; i<vpCandidateKFs.size(); i++)
     {
-        std::shared_ptr<KeyFrame> pKF = vpCandidateKFs[i];
+        shared_ptr<KeyFrame> pKF = vpCandidateKFs[i];
         if(pKF->isBad())
             vbDiscarded[i] = true;
         else
@@ -892,7 +889,7 @@ bool Tracking::Relocalisation()
             }
             else
             {
-                PnPsolver* pSolver = new PnPsolver(mCurrentFrame,vvpMapPointMatches[i]);
+                shared_ptr<PnPsolver> pSolver(new PnPsolver(mCurrentFrame,vvpMapPointMatches[i]));
                 pSolver->SetRansacParameters(0.99,10,300,4,0.5,5.991);
                 vpPnPsolvers[i] = pSolver;
                 nCandidates++;
@@ -917,7 +914,7 @@ bool Tracking::Relocalisation()
             int nInliers;
             bool bNoMore;
 
-            PnPsolver* pSolver = vpPnPsolvers[i];
+            shared_ptr<PnPsolver> pSolver = vpPnPsolvers[i];
             cv::Mat Tcw = pSolver->iterate(5,bNoMore,vbInliers,nInliers);
 
             // If Ransac reachs max. iterations discard keyframe

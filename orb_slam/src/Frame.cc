@@ -53,7 +53,7 @@ Frame::Frame(const Frame &frame)
 }
 
 
-Frame::Frame(cv::Mat &im_, const double &timeStamp, ORBextractor* extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef)
+Frame::Frame(cv::Mat &im_, const double &timeStamp, std::shared_ptr<ORBextractor> extractor, ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef)
     :mpORBvocabulary(voc),mpORBextractor(extractor), im(im_),mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone())
 {
     // Exctract ORB  
