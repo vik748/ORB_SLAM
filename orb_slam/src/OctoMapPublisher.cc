@@ -29,7 +29,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <nav_msgs/OccupancyGrid.h>
 
-#define DEFAULT_OCTOMAP_RESOLUTION 0.1
+#define DEFAULT_OCTOMAP_RESOLUTION 0.5
 
 #define PROJECTION_MIN_HEIGHT 0.01
 
@@ -194,6 +194,12 @@ void OctoMapPublisher::octomapToOccupancyGrid(const octomap::ColorOcTree& octree
 
   // Allocate space to hold the data
   map.data.resize(map.info.width * map.info.height, -1);
+
+  //init with unknown
+  for(std::vector<int8_t>::iterator it = map.data.begin(); it != map.data.end(); ++it) {
+      *it = -1;
+  }
+
   // iterate over all keys:
   unsigned i, j;
   for (curKey[1] = minKey[1], j = 0; curKey[1] <= maxKey[1]; ++curKey[1], ++j)
