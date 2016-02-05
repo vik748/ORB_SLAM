@@ -25,7 +25,7 @@
 
 #include<ros/ros.h>
 
-#include <octomap/ColorOcTree.h>
+#include <octomap/OcTree.h>
 #include <octomap/Pointcloud.h>
 #include <octomap/octomap.h>
 
@@ -62,19 +62,19 @@ private:
 
   bool save(string filename);
 
-  void refreshMap(octomap::ColorOcTree& octoMap);
+  void refreshMap(octomap::OcTree& octoMap);
 
-  void reset(octomap::ColorOcTree& octoMap);
+  void reset(octomap::OcTree& octoMap);
 
-  void mapPointsToOctomap(const std::vector<std::shared_ptr<MapPoint>> &vpMPs, octomap::ColorOcTree& m_octoMap);
+  void mapPointsToOctomap(const std::vector<std::shared_ptr<MapPoint>> &vpMPs, octomap::OcTree& m_octoMap);
 
   void mapPointsToPCL(const std::vector<std::shared_ptr<MapPoint>> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud);
 
-  void octomapToOccupancyGrid(const octomap::ColorOcTree& octree, nav_msgs::OccupancyGrid& map){
+  void octomapToOccupancyGrid(const octomap::OcTree& octree, nav_msgs::OccupancyGrid& map){
     octomapToOccupancyGrid(octree, map, -1.0*std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
   }
 
-  void octomapToOccupancyGrid(const octomap::ColorOcTree& octree, nav_msgs::OccupancyGrid& map, const double minZ_, const double maxZ_ );
+  void octomapToOccupancyGrid(const octomap::OcTree& octree, nav_msgs::OccupancyGrid& map, const double minZ_, const double maxZ_ );
 
   bool octomapBinarySrv(octomap_msgs::GetOctomapRequest  &req,
                         octomap_msgs::GetOctomapResponse &res);

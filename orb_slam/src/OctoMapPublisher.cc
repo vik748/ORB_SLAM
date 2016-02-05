@@ -39,7 +39,7 @@ namespace ORB_SLAM
 
 using namespace octomap;
 
-void OctoMapPublisher::reset(octomap::ColorOcTree& octoMap)
+void OctoMapPublisher::reset(octomap::OcTree& octoMap)
 {
   octoMap.clear();
   mbLastMapUpdateIdx = mpMap->GetMapUpdateIdx() - 1; //decrease in order to force an update
@@ -56,7 +56,7 @@ void OctoMapPublisher::reset(octomap::ColorOcTree& octoMap)
 bool OctoMapPublisher::octomapBinarySrv(octomap_msgs::GetOctomapRequest  &req,
                                         octomap_msgs::GetOctomapResponse &res)
 {
-  static octomap::ColorOcTree octoMap(m_octomapResolution);
+  static octomap::OcTree octoMap(m_octomapResolution);
   refreshMap(octoMap);
   ros::WallTime startTime = ros::WallTime::now();
   ROS_INFO("Sending binary map data on service request");
@@ -74,7 +74,7 @@ bool OctoMapPublisher::octomapBinarySrv(octomap_msgs::GetOctomapRequest  &req,
 bool OctoMapPublisher::octomapFullSrv(octomap_msgs::GetOctomapRequest  &req,
                                       octomap_msgs::GetOctomapResponse &res)
 {
-  static octomap::ColorOcTree octoMap(m_octomapResolution);
+  static octomap::OcTree octoMap(m_octomapResolution);
   refreshMap(octoMap);
   ROS_INFO("Sending full map data on service request");
   res.map.header.frame_id = MAP_FRAME_ID;
@@ -89,7 +89,7 @@ bool OctoMapPublisher::octomapFullSrv(octomap_msgs::GetOctomapRequest  &req,
 
 bool OctoMapPublisher::save(string filename)
 {
-  static octomap::ColorOcTree octoMap(m_octomapResolution);
+  static octomap::OcTree octoMap(m_octomapResolution);
   refreshMap(octoMap);
 
   filename.append(".ot");
@@ -117,7 +117,7 @@ bool OctoMapPublisher::octomapSaveSrv(orb_slam::SaveOctomapRequest  &req,
 bool OctoMapPublisher::occupancySrv(nav_msgs::GetMapRequest  &req,
                                     nav_msgs::GetMapResponse &res)
 {
-  static octomap::ColorOcTree octoMap(m_octomapResolution);
+  static octomap::OcTree octoMap(m_octomapResolution);
   refreshMap(octoMap);
   ROS_INFO("Sending full map data on service request");
   res.map.header.frame_id = MAP_FRAME_ID;
@@ -157,15 +157,15 @@ OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"),
   m_occupancyService = nh.advertiseService("occupancy_grid", &OctoMapPublisher::occupancySrv, this);
 }
 
-void OctoMapPublisher::octomapToOccupancyGrid(const octomap::ColorOcTree& octree, nav_msgs::OccupancyGrid& map, const double minZ_, const double maxZ_ )
+void OctoMapPublisher::octomapToOccupancyGrid(const octomap::OcTree& octree, nav_msgs::OccupancyGrid& map, const double minZ_, const double maxZ_ )
 {
   map.info.resolution = octree.getResolution();
   double minX, minY, minZ;
   double maxX, maxY, maxZ;
   octree.getMetricMin(minX, minY, minZ);
   octree.getMetricMax(maxX, maxY, maxZ);
-  ROS_INFO("Octree min %f %f %f", minX, minY, minZ);
-  ROS_INFO("Octree max %f %f %f", maxX, maxY, maxZ);
+  ROS_DEBUG("Octree min %f %f %f", minX, minY, minZ);
+  ROS_DEBUG("Octree max %f %f %f", maxX, maxY, maxZ);
   minZ = std::max(minZ_, minZ);
   maxZ = std::min(maxZ_, maxZ);
 
@@ -229,7 +229,7 @@ void OctoMapPublisher::publishProjectedMap()
   static nav_msgs::OccupancyGrid msgOccupancy;
   if (publisherProjected.getNumSubscribers() > 0)
   {
-    static octomap::ColorOcTree octoMap(m_octomapResolution);
+    static octomap::OcTree octoMap(m_octomapResolution);
     ros::Time now = ros::Time::now();
     refreshMap(octoMap);
     msgOccupancy.header.frame_id = MAP_FRAME_ID;
@@ -264,7 +264,7 @@ void OctoMapPublisher::publishOctomap()
 {
   if (publisherOctomapBinary.getNumSubscribers() > 0 || publisherOctomapFull.getNumSubscribers() > 0)
   {
-    static octomap::ColorOcTree octoMap(m_octomapResolution);
+    static octomap::OcTree octoMap(m_octomapResolution);
     ros::Time now = ros::Time::now();
     refreshMap(octoMap);
 
@@ -273,6 +273,7 @@ void OctoMapPublisher::publishOctomap()
       static octomap_msgs::Octomap msgOctomapBinary;
       msgOctomapBinary.header.frame_id = MAP_FRAME_ID;
       msgOctomapBinary.header.stamp = now;
+
       if (octomap_msgs::binaryMapToMsg(octoMap, msgOctomapBinary))
       {
         publisherOctomapBinary.publish(msgOctomapBinary);
@@ -307,7 +308,7 @@ void OctoMapPublisher::Publish()
   }
 }
 
-void OctoMapPublisher::refreshMap(octomap::ColorOcTree& octoMap)
+void OctoMapPublisher::refreshMap(octomap::OcTree& octoMap)
 {
   reset(octoMap);
   vector<std::shared_ptr<MapPoint>> vMapPoints = mpMap->GetAllMapPoints();
@@ -315,7 +316,7 @@ void OctoMapPublisher::refreshMap(octomap::ColorOcTree& octoMap)
   mapPointsToOctomap(vMapPoints, octoMap);
 }
 
-void OctoMapPublisher::mapPointsToOctomap(const vector<std::shared_ptr<MapPoint>> &vpMPs, octomap::ColorOcTree& octoMap)
+void OctoMapPublisher::mapPointsToOctomap(const vector<std::shared_ptr<MapPoint>> &vpMPs, octomap::OcTree& octoMap)
 {
   Pointcloud pointCloud;
 
@@ -345,7 +346,7 @@ void OctoMapPublisher::mapPointsToOctomap(const vector<std::shared_ptr<MapPoint>
     octoMap.insertPointCloud(pointCloud, origin, frame, -1, false, false);
   }catch(...){
     ROS_ERROR("TF not available");
-    octoMap.insertPointCloud(pointCloud, origin, -1, false, false);
+    octoMap.insertPointCloud(pointCloud, octomap::point3d(), -1, false, false);
   }
 }
 
