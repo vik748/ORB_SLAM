@@ -61,13 +61,17 @@ It only depends on OpenCV, but it should be included in the ROS distribution.
 
 1. In your ROS package path (check your environment variable `ROS_PACKAGE_PATH`) clone this repository:
 
+	Original version:
 		git clone https://github.com/raulmur/ORB_SLAM.git ORB_SLAM
+	My version:
+		git clone https://github.com/cehberlin/ORB_SLAM.git
 
 2. Run this line from your catkin workspace root, `indigo` here should be replaced with your preferred ROS distro.
 	`rosdep install --from-paths src --ignore-src --rosdistro indigo -y` 
 
 3. Build all by running catkin_make in your workspace root.
 
+	Only original version:
 	*Tip: Set your favorite compilation flags in line 12 and 13 of* `Thirdparty/DBoW2/CMakeLists.txt` (by default -03 -march=native)
 
 #4. Usage
