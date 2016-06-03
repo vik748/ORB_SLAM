@@ -56,6 +56,10 @@ We make use of some components of the DBoW2 library for place recognition and fe
 including only the components we need and also some modifications that are listed in `Thirdparty/DBoW2/LICENSE.txt`. 
 It only depends on OpenCV, but it should be included in the ROS distribution.
 
+##2.5 Octomap
+The integrated octomap export topics und services require following packages.
+
+	sudo apt-get install ros-indigo-octomap ros-indigo-octomap-msgs ros-indigo-octomap-ros
 
 #3. Installation
 
