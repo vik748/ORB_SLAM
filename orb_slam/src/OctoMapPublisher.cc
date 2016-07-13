@@ -192,6 +192,11 @@ void OctoMapPublisher::octomapToOccupancyGrid(const octomap::OcTree& octree, nav
   map.info.origin.position.x = origin.x() - octree.getResolution() * 0.5;
   map.info.origin.position.y = origin.y() - octree.getResolution() * 0.5;
 
+  map.info.origin.orientation.x = 0.;
+  map.info.origin.orientation.y = 0.;
+  map.info.origin.orientation.z = 0.;
+  map.info.origin.orientation.w = 1.;
+
   // Allocate space to hold the data
   map.data.resize(map.info.width * map.info.height, -1);
 
