@@ -96,14 +96,14 @@ bool OctoMapPublisher::save(string filename)
 
   std::ofstream outfile(filename.c_str(), std::ios_base::out | std::ios_base::binary);
   if (outfile.is_open()){
-    ROS_INFO("Writing octomap to %s", filename.c_str());
+    ROS_DEBUG("Writing octomap to %s", filename.c_str());
     octoMap.write(outfile);
     outfile.close();
-    ROS_INFO("color tree written %s", filename.c_str());
+    ROS_DEBUG("color tree written %s", filename.c_str());
     return true;
   }
   else {
-    ROS_INFO("could not open  %s for writing", filename.c_str());
+    ROS_ERROR("could not open  %s for writing", filename.c_str());
     return false;
   }
 }
