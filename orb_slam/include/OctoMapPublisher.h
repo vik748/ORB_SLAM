@@ -104,6 +104,7 @@ private:
 
   const char* MAP_FRAME_ID;
   const char* CAMERA_FRAME_ID;
+  const char* BASE_LINK_FRAME_ID;
 
   ros::Publisher publisherPCL;
   ros::Publisher publisherOctomapFull;

@@ -136,7 +136,8 @@ OctoMapPublisher::OctoMapPublisher(Map* pMap):nh("~"),
     mpMap(pMap),
     mbLastMapUpdateIdx(0),
     MAP_FRAME_ID("/orb_slam/map"),
-    CAMERA_FRAME_ID("/ORB_SLAM/Camera")
+    CAMERA_FRAME_ID("/ORB_SLAM/Camera"),
+    BASE_LINK_FRAME_ID("ORB_base_link")
 {
 
   nh.param<double>("occupancy_projection_min_height", m_projectionMinHeight, m_projectionMinHeight);
@@ -335,14 +336,18 @@ void OctoMapPublisher::mapPointsToOctomap(const vector<std::shared_ptr<MapPoint>
     pointCloud.push_back(pos.at<float>(0), pos.at<float>(1),pos.at<float>(2));
   }
 
+  if(pointCloud.size() == 0)
+  {
+    return;
+  }
+
   octomap::point3d origin;
 
   try{
 
     tf::StampedTransform transform_in_target_frame;
 
-    //TODO add configuration for this
-    m_tf_listener.lookupTransform("ORB_base_link", CAMERA_FRAME_ID, ros::Time(0) , transform_in_target_frame);
+    m_tf_listener.lookupTransform(BASE_LINK_FRAME_ID, CAMERA_FRAME_ID, ros::Time(0) , transform_in_target_frame);
 
     octomap::pose6d frame = octomap::poseTfToOctomap(transform_in_target_frame);
 
@@ -350,9 +355,10 @@ void OctoMapPublisher::mapPointsToOctomap(const vector<std::shared_ptr<MapPoint>
     //TODO potential option insert only current like used for point cloud and integrate octomap
     octoMap.insertPointCloud(pointCloud, origin, frame, -1, false, false);
   }catch(...){
-    ROS_ERROR("TF not available");
-    octoMap.insertPointCloud(pointCloud, octomap::point3d(), -1, false, false);
+    ROS_ERROR("TF from %s to %s not available for point cloud generation", BASE_LINK_FRAME_ID, CAMERA_FRAME_ID);
+    octoMap.insertPointCloud(pointCloud, origin, -1, false, false);
   }
+
 }
 
 void OctoMapPublisher::mapPointsToPCL(const vector<std::shared_ptr<MapPoint>> &vpRefMPs, pcl::PointCloud<pcl::PointXYZ>& pclCloud)
