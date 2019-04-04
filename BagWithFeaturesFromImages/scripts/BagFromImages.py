@@ -12,7 +12,6 @@ import cv2
 import glob
 import re
 import argparse
-from zernike import MultiHarrisZernike
 import logging
 from ros import rosbag
 import roslib
@@ -25,8 +24,6 @@ import time
 #import ImageFile
 from cv_bridge import CvBridge, CvBridgeError
 from matplotlib import pyplot as plt
-from posedetection_msgs.msg import Feature0D
-from posedetection_msgs.msg import ImageFeature0D
 import progressbar
 progressbar.streams.wrap_stderr()
 
@@ -34,17 +31,6 @@ bglog = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(levelname)8s  %(message)s')
 mpl_logger = logging.getLogger('matplotlib') 
 mpl_logger.setLevel(logging.WARNING) 
-
-def KP2Feature0D(kp, des):
-    f = Feature0D()
-    f.type = 'Zernike'
-    f.descriptor_dim = des.shape[1]
-    f.descriptors = des.flatten()
-    f.positions = cv2.KeyPoint_convert(kp).flatten()
-    f.scales = np.array([k.octave for k in kp],dtype='float32')
-    f.orientations = np.array([k.angle for k in kp],dtype='float32')
-    f.confidences = np.array([k.response for k in kp],dtype='float32')
-    return f
 
 
 def CreateMonoBag(imgs,bagname):
@@ -59,20 +45,13 @@ def CreateMonoBag(imgs,bagname):
         fig_image = plt.imshow(im,cmap='gray')
         plt.axis("off")
         
-    if_msg = ImageFeature0D()
-
     try:
         for im_name in progressbar.progressbar(imgs):
             bglog.debug("Adding %s" % im_name)
             im = cv2.imread(im_name, cv2.IMREAD_GRAYSCALE)
-            kp, des = mshz.detectAndCompute(im, mask=None)
-            feat = KP2Feature0D(kp,des)
             
             if display:
-                kp1_top = sorted(kp, key = lambda x:x.response)[-25:]
-                outImage = cv2.drawKeypoints(im, kp1_top, im,color=[255,255,0],
-                             flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-                fig_image.set_data(outImage)
+                fig_image.set_data(im)
                 plt.draw()
                 plt.pause(0.0001)
 
@@ -85,13 +64,9 @@ def CreateMonoBag(imgs,bagname):
                             
             Img.header.stamp = Stamp
             Img.header.seq = seq
-            if_msg.image = Img
-            if_msg.features = feat
-            if_msg.features.header.stamp = Stamp
-            if_msg.features.header.seq = seq
             
             seq += 1
-            bag.write(out_topic, if_msg, Stamp)
+            bag.write(out_topic, Img, Stamp)
     finally:
         bag.close()       
 
@@ -125,10 +100,9 @@ if __name__ == '__main__':
     assert images_full is not None, "ERROR: No images read"
     freq = config_dict['frequency']
     display = config_dict['display_images']
-    out_topic = config_dict['image_w_feat_topic']
+    out_topic = config_dict['image_topic']
     
     bridge = CvBridge()
-    mshz = MultiHarrisZernike(**config_dict['ZERNIKE_settings'])
-    
+        
     CreateMonoBag(images_full, config_dict['bag_name'])
     
