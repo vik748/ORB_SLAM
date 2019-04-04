@@ -70,8 +70,8 @@ Tip: Use a roslaunch to launch ORB_SLAM, image_view and rviz from just one instr
 		roslaunch ExampleGroovyHydro.launch
 
 5. In order to get useful results from the OctoMapPublisher module you need the transformations as shown in the following picture
-
-<img src="orb_slam/doc/map_tfs.png" alt="OctoMapPublisher TF" width="480" align="middle">  
+   
+   <img src="orb_slam/doc/map_tfs.png" alt="OctoMapPublisher TF" width="480" align="middle">  
 
 * ORB_SLAM/Camera is the localisation from the SLAM algorithm itself
 * ORB_base_link is the planar base of your system relative to the (tilted) camera, e.g. the robot platform
