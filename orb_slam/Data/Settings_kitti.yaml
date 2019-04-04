@@ -1,0 +1,38 @@
+%YAML:1.0
+
+# Camera Parameters. Adjust them!
+Camera.fx: 699.33112889
+Camera.fy: 693.66457792
+Camera.cx: 403.23876197
+Camera.cy: 293.40739086
+
+# Camera frames per second
+Camera.fps: 10.0
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+# Are the images already rectified? 0=no rectified, 1=rectified
+Camera.Rectified: 0
+
+#--------------------------------------------------------------------------------------------
+### Changing the parameters below could seriously degradate the performance of the system
+
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 1000
+
+# ORB Extractor: Scale factor between levels in the scale pyramid
+ORBextractor.scaleFactor: 2.0
+
+# ORB Extractor: Number of levels in the scale pyramid
+ORBextractor.nLevels: 6
+
+# ORB Extractor: Fast threshold (lower less restrictive)
+ORBextractor.fastTh: 10
+
+# ORB Extractor: Score to sort features. 0 -> Harris Score, 1 -> FAST Score
+ORBextractor.nScoreType: 0
+
+
+# Constant Velocity Motion Model (0 - disabled, 1 - enabled [recommended])
+UseMotionModel: 1
