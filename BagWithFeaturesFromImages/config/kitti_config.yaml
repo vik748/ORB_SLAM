@@ -1,0 +1,20 @@
+osx_image_folder: '/Users/vik748/Google Drive/data/kitti/00/image_0'
+linux_image_folder: '/home/vik748/data/kitti/00/image_0'
+bag_name: '/home/vik748/data/kitti.bag'
+image_ext: 'png'
+frequency: 10.0
+use_masks: False
+use_clahe: False
+display_images: False
+
+ZERNIKE_settings:
+ Nfeats: 1200
+ seci: 2 
+ secj: 3
+ levels: 6
+ ratio: 0.75
+ sigi: 2.75
+ sigd: 1.0
+ nmax: 8
+ like_matlab: False
+ lmax_nd: 3
