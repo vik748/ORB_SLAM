@@ -3,19 +3,19 @@
 # Camera Parameters. Adjust them!
 
 # Camera calibration parameters (OpenCV) 
-Camera.fx: 609.2855
-Camera.fy: 609.3422 
-Camera.cx: 351.4274
-Camera.cy: 237.7324
+Camera.fx: 3551.342810
+Camera.fy: 3522.689669
+Camera.cx: 2033.513326
+Camera.cy: 1455.489194
 
 # Camera distortion paremeters (OpenCV) --
-Camera.k1: -0.3492
-Camera.k2: 0.1363
-Camera.p1: 0.0
-Camera.p2: 0.0
+Camera.k1: -0.276796 
+Camera.k2: 0.113400 
+Camera.p1: -0.000349 
+Camera.p2: -0.000469
 
 # Camera frames per second 
-Camera.fps: 30.0
+Camera.fps: 2.0
 
 # Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
 Camera.RGB: 1
@@ -24,7 +24,7 @@ Camera.RGB: 1
 ### Changing the parameters below could seriously degradate the performance of the system
 
 # ORB Extractor: Number of features per image
-ORBextractor.nFeatures: 1000
+ORBextractor.nFeatures: 8000
 
 # ORB Extractor: Scale factor between levels in the scale pyramid 	
 ORBextractor.scaleFactor: 1.2
@@ -36,8 +36,12 @@ ORBextractor.nLevels: 8
 ORBextractor.fastTh: 20
 
 # ORB Extractor: Score to sort features. 0 -> Harris Score, 1 -> FAST Score			
-ORBextractor.nScoreType: 1
+ORBextractor.nScoreType: 0
 
 
 # Constant Velocity Motion Model (0 - disabled, 1 - enabled [recommended])
 UseMotionModel: 1
+
+# oST version 5.0 parameters
+
+
