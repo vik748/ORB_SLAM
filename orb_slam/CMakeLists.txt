@@ -12,6 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_conversions
   g2o
   message_generation
+  posedetection_msgs
+  message_filters
 )
 
 ADD_DEFINITIONS("-std=c++11")
@@ -39,8 +41,8 @@ generate_messages(
 )
 
 catkin_package(
-  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs 
-  DEPENDS message_runtime std_msgs 
+  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs posedetection_msgs
+  DEPENDS message_runtime std_msgs posedetection_mgs
 )
 
 message(*************************)
