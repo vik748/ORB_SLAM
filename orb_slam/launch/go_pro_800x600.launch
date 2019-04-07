@@ -1,16 +1,13 @@
 <launch>
-  <!-- configure console output verbosity mode:debug_console.conf or std_console.conf -->
-  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find orb_slam)/cfg/debug_console.conf"/>
-
 <!--
 	<node pkg="image_view" type="image_view" name="image_view" respawn="false" output="log">
 		<remap from="/image" to="/ORB_SLAM/Frame" />
-		<param name="autosize" value="true"/>
+		<param name="autosize" value="false"/>
 	</node>
 -->
 	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find orb_slam)/Data/gopro.rviz" output="log"/>
 
- 	<node pkg="orb_slam" type="orb_slam" name="orb_slam"  args="Data/ORBvoc.txt Data/Settings_kitti.yaml" cwd="node" output="screen">
+ 	<node pkg="orb_slam" type="orb_slam" name="orb_slam"  args="Data/ORBvoc.txt Data/Settings_gopro_800x600.yaml" cwd="node" output="screen">
 		<!-- <remap from="/camera/image_raw" to="/usb_cam/image_raw" /> -->
 	</node>
 

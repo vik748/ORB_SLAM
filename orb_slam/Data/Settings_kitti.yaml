@@ -1,10 +1,15 @@
 %YAML:1.0
 
 # Camera Parameters. Adjust them!
-Camera.fx: 699.33112889
-Camera.fy: 693.66457792
-Camera.cx: 403.23876197
-Camera.cy: 293.40739086
+Camera.fx: 7.188560e+02
+Camera.fy: 7.188560e+02
+Camera.cx: 6.071928e+02
+Camera.cy: 1.852157e+02
+
+Camera.k1: 0.0
+Camera.k2: 0.0
+Camera.p1: 0.0
+Camera.p2: 0.0
 
 # Camera frames per second
 Camera.fps: 10.0
@@ -13,25 +18,25 @@ Camera.fps: 10.0
 Camera.RGB: 1
 
 # Are the images already rectified? 0=no rectified, 1=rectified
-Camera.Rectified: 0
+Camera.Rectified: 1
 
 #--------------------------------------------------------------------------------------------
 ### Changing the parameters below could seriously degradate the performance of the system
 
 # ORB Extractor: Number of features per image
-ORBextractor.nFeatures: 1000
+ORBextractor.nFeatures: 1200
 
 # ORB Extractor: Scale factor between levels in the scale pyramid
-ORBextractor.scaleFactor: 2.0
+ORBextractor.scaleFactor: 1.2
 
 # ORB Extractor: Number of levels in the scale pyramid
-ORBextractor.nLevels: 6
+ORBextractor.nLevels: 8
 
 # ORB Extractor: Fast threshold (lower less restrictive)
-ORBextractor.fastTh: 10
+ORBextractor.fastTh: 20
 
 # ORB Extractor: Score to sort features. 0 -> Harris Score, 1 -> FAST Score
-ORBextractor.nScoreType: 0
+ORBextractor.nScoreType: 1
 
 
 # Constant Velocity Motion Model (0 - disabled, 1 - enabled [recommended])
