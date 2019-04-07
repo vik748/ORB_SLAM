@@ -19,22 +19,22 @@
 */
 
 #include "Tracking.h"
-#include<ros/ros.h>
+#include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 
-#include<opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 
-#include"ORBmatcher.h"
-#include"FramePublisher.h"
-#include"Converter.h"
-#include"Map.h"
-#include"Initializer.h"
+#include "ORBmatcher.h"
+#include "FramePublisher.h"
+#include "Converter.h"
+#include "Map.h"
+#include "Initializer.h"
 
-#include"Optimizer.h"
-#include"PnPsolver.h"
+#include "Optimizer.h"
+#include "PnPsolver.h"
 
-#include<iostream>
-#include<fstream>
+#include <iostream>
+#include <fstream>
 
 
 using namespace std;
@@ -160,10 +160,27 @@ void Tracking::SetKeyFrameDatabase(KeyFrameDatabase *pKFDB)
 void Tracking::Run()
 {
     ros::NodeHandle nodeHandler;
-    ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &Tracking::GrabImage, this);
+    //ros::Subscriber sub = nodeHandler.subscribe("/camera/image_raw", 1, &Tracking::GrabImage, this);
+    //ros::Subscriber sub_feat = nodeHandler.subscribe("/camera/feat", 1, &Tracking::Feat_CB, this);
+    
+    message_filters::Subscriber<sensor_msgs::Image> image_sub(nodeHandler, "/camera/image_raw", 1);
+    message_filters::Subscriber<posedetection_msgs::Feature0D> feat_sub(nodeHandler, "/camera/feat", 1);
+
+    typedef message_filters::sync_policies::ExactTime<sensor_msgs::Image, posedetection_msgs::Feature0D> ET_Img_Feat_SyncPolicy;
+    //ExactTime takes a queue size as its constructor argument, hence MySyncPolicy(10)
+    message_filters::Synchronizer<ET_Img_Feat_SyncPolicy> sync(ET_Img_Feat_SyncPolicy(10), image_sub, feat_sub);
+    sync.registerCallback(boost::bind(&Tracking::GrabImageWithFeat, this, _1, _2));
 
     ros::spin();
 }
+
+
+void Tracking::GrabImageWithFeat(const sensor_msgs::ImageConstPtr& img_msg, const posedetection_msgs::Feature0D::ConstPtr& feat_msg)
+{
+    ROS_DEBUG("GrabImageWithFeat Callback called");
+    Tracking::GrabImage(img_msg);
+}
+
 
 void Tracking::GrabImage(const sensor_msgs::ImageConstPtr& msg)
 {

@@ -21,19 +21,23 @@
 #ifndef TRACKING_H
 #define TRACKING_H
 
-#include<opencv2/core/core.hpp>
-#include<opencv2/features2d/features2d.hpp>
-#include<sensor_msgs/Image.h>
-#include<sensor_msgs/image_encodings.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/image_encodings.h>
+#include <posedetection_msgs/Feature0D.h>
+#include <message_filters/subscriber.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/exact_time.h>
 
-#include"FramePublisher.h"
-#include"Map.h"
-#include"LocalMapping.h"
-#include"LoopClosing.h"
-#include"Frame.h"
+#include "FramePublisher.h"
+#include "Map.h"
+#include "LocalMapping.h"
+#include "LoopClosing.h"
+#include "Frame.h"
 #include "ORBVocabulary.h"
-#include"KeyFrameDatabase.h"
-#include"ORBextractor.h"
+#include "KeyFrameDatabase.h"
+#include "ORBextractor.h"
 #include "Initializer.h"
 #include "MapPublisher.h"
 
@@ -91,6 +95,9 @@ public:
 
 protected:
     void GrabImage(const sensor_msgs::ImageConstPtr& msg);
+    void GrabImageWithFeat(const sensor_msgs::ImageConstPtr& img_msg, 
+                           const posedetection_msgs::Feature0D::ConstPtr& feat_msg);
+    void Feat_CB(const posedetection_msgs::Feature0D::ConstPtr& feat_msg);
 
     void FirstInitialization();
     void Initialize();
