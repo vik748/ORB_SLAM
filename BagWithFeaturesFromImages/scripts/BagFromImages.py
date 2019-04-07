@@ -24,7 +24,6 @@ import time
 #import ImageFile
 from cv_bridge import CvBridge, CvBridgeError
 from matplotlib import pyplot as plt
-import progressbar
 progressbar.streams.wrap_stderr()
 
 bglog = logging.getLogger(__name__)
@@ -49,6 +48,9 @@ def CreateMonoBag(imgs,bagname):
         for im_name in progressbar.progressbar(imgs):
             bglog.debug("Adding %s" % im_name)
             im = cv2.imread(im_name, cv2.IMREAD_GRAYSCALE)
+            
+            if use_clahe:
+                im = clahe.apply(im)
             
             if display:
                 fig_image.set_data(im)
@@ -81,6 +83,10 @@ if __name__ == '__main__':
     config_dict = yaml.safe_load(open(args.config))
     USE_MASKS = config_dict['use_masks']
     image_ext = config_dict['image_ext']
+    use_clahe = config_dict['use_clahe']
+    
+    if use_clahe:
+        clahe = cv2.createCLAHE(**config_dict['CLAHE_settings'])
     
     if sys.platform == 'darwin':
         image_folder = config_dict['osx_image_folder']

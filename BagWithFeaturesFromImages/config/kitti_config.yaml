@@ -1,12 +1,12 @@
 osx_image_folder: '/Users/vik748/Google Drive/data/kitti/00/image_0'
 linux_image_folder: '/home/vik748/data/kitti/00/image_0'
-bag_name: '/home/vik748/data/kitti.bag'
+bag_name: '/home/vik748/data/kitti_separate_feats.bag'
 image_ext: 'png'
 frequency: 10.0
 use_clahe: False
 display_images: False
 image_topic: camera/image_raw
-image_w_feat_topic: image_with_feat
+feat_topic: camera/feat
 
 use_masks: False
 osx_masks_folder: ''

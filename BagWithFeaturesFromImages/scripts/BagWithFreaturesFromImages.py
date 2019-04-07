@@ -26,8 +26,8 @@ import time
 from cv_bridge import CvBridge, CvBridgeError
 from matplotlib import pyplot as plt
 from posedetection_msgs.msg import Feature0D
-from posedetection_msgs.msg import ImageFeature0D
 import progressbar
+import os
 progressbar.streams.wrap_stderr()
 
 bglog = logging.getLogger(__name__)
@@ -59,8 +59,6 @@ def CreateMonoBag(imgs,bagname):
         fig_image = plt.imshow(im,cmap='gray')
         plt.axis("off")
         
-    if_msg = ImageFeature0D()
-
     try:
         for im_name in progressbar.progressbar(imgs):
             bglog.debug("Adding %s" % im_name)
@@ -85,13 +83,13 @@ def CreateMonoBag(imgs,bagname):
                             
             Img.header.stamp = Stamp
             Img.header.seq = seq
-            if_msg.image = Img
-            if_msg.features = feat
-            if_msg.features.header.stamp = Stamp
-            if_msg.features.header.seq = seq
+            feat.header.stamp = Stamp
+            feat.header.seq = seq
             
             seq += 1
-            bag.write(out_topic, if_msg, Stamp)
+            bag.write(image_topic, Img, Stamp)
+            bag.write(feat_topic, feat, Stamp)
+            
     finally:
         bag.close()       
 
@@ -125,10 +123,16 @@ if __name__ == '__main__':
     assert images_full is not None, "ERROR: No images read"
     freq = config_dict['frequency']
     display = config_dict['display_images']
-    out_topic = config_dict['image_w_feat_topic']
+    image_topic = config_dict['image_topic']
+    feat_topic = config_dict['feat_topic']
+    out_file = config_dict['bag_name']
     
     bridge = CvBridge()
     mshz = MultiHarrisZernike(**config_dict['ZERNIKE_settings'])
-    
-    CreateMonoBag(images_full, config_dict['bag_name'])
+    if os.path.exists(out_file):
+        bglog.warn("File Already Exited, over-writing - "+out_file)
+    else:
+        bglog.info("Writing to file - "+out_file)
+
+    CreateMonoBag(images_full, out_file)
     
